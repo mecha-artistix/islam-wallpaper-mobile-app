@@ -1,13 +1,15 @@
+import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { Text, View, StyleSheet, Screen } from "react-native";
+import { FlatList, Pressable, StyleSheet, Text } from "react-native";
+import IsmCard from "../components/IsmCard";
 import { get_asma_ul_husna } from "../services/api";
-import { FlatList } from "react-native";
-import Ism from "./asmaUlHusna/ism";
 
 export default function Index() {
   const [asmaUlHusna, setAsmaUlHusna] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  const router = useRouter();
 
   useEffect(() => {
     async function fetchAsmaUlHusna() {
@@ -31,10 +33,19 @@ export default function Index() {
       data={asmaUlHusna}
       keyExtractor={(item) => item.number.toString()}
       contentContainerStyle={styles.container}
-      ListHeaderComponent={
-        <Text style={styles.header}>Asma ul Husna test</Text>
-      }
-      renderItem={({ item }) => <Ism name={item} />}
+      ListHeaderComponent={<Text style={styles.header}>Asma ul Husna</Text>}
+      renderItem={({ item }) => (
+        <Pressable
+          onPress={() =>
+            router.push({
+              pathname: "/asmaUlHusna/[ism-number]",
+              params: { ism: JSON.stringify(item) },
+            })
+          }
+        >
+          <IsmCard name={item} />
+        </Pressable>
+      )}
     />
   );
 }

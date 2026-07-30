@@ -3,13 +3,31 @@ import { useEffect, useState } from "react";
 import { FlatList, Pressable, StyleSheet, Text } from "react-native";
 import IsmCard from "../components/IsmCard";
 import { get_asma_ul_husna } from "../services/api";
+import * as Notifications from "expo-notifications";
+
 
 export default function Index() {
   const [asmaUlHusna, setAsmaUlHusna] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
+ 
   const router = useRouter();
+
+  useEffect(() => {
+    registerWallpaperScheduler();
+  }, []);
+  
+  Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowBanner: true,
+    shouldShowList: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  }),
+});
+
+
+
 
   useEffect(() => {
     async function fetchAsmaUlHusna() {

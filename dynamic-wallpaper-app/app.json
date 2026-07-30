@@ -11,13 +11,16 @@
       "icon": "./assets/expo.icon"
     },
     "android": {
+      "permissions": [
+        "SET_WALLPAPER"
+      ],
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false,
+      "predictiveBackGestureEnabled": true,
       "package": "com.anonymous.dynamicwallpaperapp"
     },
     "web": {
@@ -33,11 +36,21 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 76
         }
-      ]
+      ],
+      "expo-image",
+      "expo-sharing",
+      "expo-secure-store",
+      "expo-background-task"
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "0920416c-0092-46c8-8ff8-cb4ac4a318c4"
+      }
     }
   }
 }

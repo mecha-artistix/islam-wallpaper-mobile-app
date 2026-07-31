@@ -1,3 +1,2 @@
-export { captureWallpaper } from "./capture";
-export { saveWallpaper } from "./storage";
+export { generateWallpaperImage } from "./generator";
 export { setDeviceWallpaper } from "./manager";

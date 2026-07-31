@@ -1,17 +1,34 @@
 import * as TaskManager from "expo-task-manager";
+import { BackgroundTaskResult } from "expo-background-task";
+import { ASMA_UL_HUSNA } from "../../data/asmaUlHusna";
+import { generateWallpaperImage } from "../wallpaper/generator";
+import { setDeviceWallpaper } from "../wallpaper/manager";
+import {
+  getSelectedNameIndex,
+  setSelectedNameIndex,
+  setLastRotation,
+  shouldRotate,
+} from "../preferences";
 
 export const WALLPAPER_TASK = "wallpaper-task";
 
 TaskManager.defineTask(WALLPAPER_TASK, async () => {
   try {
-    console.log("Background wallpaper task");
+    const rotate = await shouldRotate();
+    if (!rotate) return BackgroundTaskResult.Success;
 
-    // We'll call the wallpaper service here later
+    const currentIndex = await getSelectedNameIndex();
+    const nextIndex = (currentIndex + 1) % ASMA_UL_HUSNA.length;
+    const selectedName = ASMA_UL_HUSNA[nextIndex];
 
-    return TaskManager.BackgroundTaskResult.Success;
+    const wallpaperUri = await generateWallpaperImage(selectedName);
+    await setDeviceWallpaper(wallpaperUri);
+    await setSelectedNameIndex(nextIndex);
+    await setLastRotation(Date.now());
+
+    return BackgroundTaskResult.Success;
   } catch (e) {
-    console.error(e);
-
-    return TaskManager.BackgroundTaskResult.Failed;
+    console.error("Background wallpaper task failed:", e);
+    return BackgroundTaskResult.Failed;
   }
 });

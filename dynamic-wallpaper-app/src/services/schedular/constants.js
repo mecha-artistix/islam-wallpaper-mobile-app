@@ -1,1 +1,0 @@
-export const WALLPAPER_INTERVAL_MINUTES = 60 * 24; // 24 hours

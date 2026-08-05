@@ -1,34 +1,20 @@
 import * as TaskManager from "expo-task-manager";
 import { BackgroundTaskResult } from "expo-background-task";
-import { ASMA_UL_HUSNA } from "../../data/asmaUlHusna";
-import { generateWallpaperImage } from "../wallpaper/generator";
-import { setDeviceWallpaper } from "../wallpaper/manager";
-import {
-  getSelectedNameIndex,
-  setSelectedNameIndex,
-  setLastRotation,
-  shouldRotate,
-} from "../preferences";
+import { rotateWallpaper } from "../wallpaper/rotation";
 
 export const WALLPAPER_TASK = "wallpaper-task";
 
+// NOTE: expo-background-task never runs while the app is in the foreground
+// (enforced natively), and the WorkManager job requires network connectivity.
+// Rotation while the app is open is handled by the timer in app/_layout.jsx.
 TaskManager.defineTask(WALLPAPER_TASK, async () => {
+  console.log(`[BGTask] ▶ fired at ${new Date().toISOString()}`);
   try {
-    const rotate = await shouldRotate();
-    if (!rotate) return BackgroundTaskResult.Success;
-
-    const currentIndex = await getSelectedNameIndex();
-    const nextIndex = (currentIndex + 1) % ASMA_UL_HUSNA.length;
-    const selectedName = ASMA_UL_HUSNA[nextIndex];
-
-    const wallpaperUri = await generateWallpaperImage(selectedName);
-    await setDeviceWallpaper(wallpaperUri);
-    await setSelectedNameIndex(nextIndex);
-    await setLastRotation(Date.now());
-
+    const name = await rotateWallpaper();
+    console.log(name ? `[BGTask] ✓ rotated to ${name.transliteration}` : "[BGTask] ⏭ skipped — interval not elapsed");
     return BackgroundTaskResult.Success;
   } catch (e) {
-    console.error("Background wallpaper task failed:", e);
+    console.error(`[BGTask] ✗ failed: ${e.message}`);
     return BackgroundTaskResult.Failed;
   }
 });

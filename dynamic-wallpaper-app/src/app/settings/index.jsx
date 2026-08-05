@@ -7,16 +7,28 @@ import {
   getRotationIntervalMinutes,
   setRotationIntervalMinutes,
   getSelectedNameIndex,
+  getLastRotation,
   resetRotationIndex,
 } from "../../services/preferences";
 import { registerWallpaperScheduler } from "../../services/schedular/schedular";
+import { rotateWallpaper } from "../../services/wallpaper/rotation";
 import { ASMA_UL_HUSNA } from "../../data/asmaUlHusna";
+
+function formatLastRotation(timestamp) {
+  if (!timestamp) return "Never";
+  const minutes = Math.floor((Date.now() - timestamp) / 60000);
+  if (minutes < 1) return "Just now";
+  if (minutes < 60) return `${minutes} min ago`;
+  const hours = Math.floor(minutes / 60);
+  return `${hours} h ${minutes % 60} min ago`;
+}
 
 export default function SettingsScreen() {
   const router = useRouter();
   const [autoRotate, setAutoRotateState] = useState(true);
   const [intervalMinutes, setIntervalMinutesState] = useState("24");
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [lastRotation, setLastRotationState] = useState(null);
   const totalNames = ASMA_UL_HUSNA.length;
   const [loading, setLoading] = useState(true);
   const [inputValue, setInputValue] = useState("");
@@ -27,15 +39,17 @@ export default function SettingsScreen() {
 
   async function loadSettings() {
     try {
-      const [auto, interval, index] = await Promise.all([
+      const [auto, interval, index, last] = await Promise.all([
         getAutoRotate(),
         getRotationIntervalMinutes(),
         getSelectedNameIndex(),
+        getLastRotation(),
       ]);
       setAutoRotateState(auto ?? true);
       setIntervalMinutesState(String(interval));
       setInputValue(String(interval));
       setCurrentIndex(index);
+      setLastRotationState(last);
     } catch (e) {
       console.error("Failed to load settings:", e);
     } finally {
@@ -46,7 +60,8 @@ export default function SettingsScreen() {
   async function handleAutoRotateToggle(value) {
     setAutoRotateState(value);
     await setAutoRotate(value);
-    await registerWallpaperScheduler();
+    // force=true: re-register so WorkManager picks up the change now
+    await registerWallpaperScheduler({ force: true });
   }
 
   async function handleIntervalSubmit() {
@@ -57,9 +72,11 @@ export default function SettingsScreen() {
     }
     setIntervalMinutesState(String(minutes));
     await setRotationIntervalMinutes(minutes);
-    await registerWallpaperScheduler();
+    // force=true: without it the scheduler skips re-registration and the old
+    // WorkManager interval would keep running
+    await registerWallpaperScheduler({ force: true });
     Keyboard.dismiss();
-    Alert.alert("Saved", `Interval set to ${minutes} min. Android enforces a 15-minute minimum.`);
+    Alert.alert("Saved", `Interval set to ${minutes} min.`);
   }
 
   async function handleResetRotation() {
@@ -83,6 +100,20 @@ export default function SettingsScreen() {
         },
       ]
     );
+  }
+
+  async function handleRotateNow() {
+    try {
+      const name = await rotateWallpaper({ force: true });
+      if (name) {
+        await loadSettings();
+        Alert.alert("Rotated", `Wallpaper set to ${name.transliteration}`);
+      } else {
+        Alert.alert("Skipped", "A rotation is already in progress");
+      }
+    } catch (e) {
+      Alert.alert("Error", `Rotation failed: ${e.message}`);
+    }
   }
 
   if (loading) {
@@ -114,7 +145,7 @@ export default function SettingsScreen() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Rotation Interval (minutes)</Text>
         <Text style={styles.settingDescription}>
-          Minimum 15 minutes (Android limit). Examples: 15 = 15 min, 60 = 1 hour, 1440 = 24 hours
+          Examples: 5 = 5 min, 60 = 1 hour, 1440 = 24 hours. Very short intervals depend on the OS scheduler and battery settings.
         </Text>
         <View style={styles.inputContainer}>
           <TextInput
@@ -148,6 +179,21 @@ export default function SettingsScreen() {
           <Text style={styles.statusLabel}>Interval</Text>
           <Text style={styles.statusValue}>{intervalMinutes} minute{parseFloat(intervalMinutes) !== 1 ? "s" : ""}</Text>
         </View>
+        <View style={styles.statusRow}>
+          <Text style={styles.statusLabel}>Last Rotation</Text>
+          <Text style={styles.statusValue}>{formatLastRotation(lastRotation)}</Text>
+        </View>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Test Rotation</Text>
+        <Text style={styles.settingDescription}>
+          Rotates immediately, ignoring the interval. The OS background task only fires while the
+          app is closed and the device has network — use this to verify rotation works end to end.
+        </Text>
+        <TouchableOpacity style={styles.saveButton} onPress={handleRotateNow}>
+          <Text style={styles.saveButtonText}>Rotate Now</Text>
+        </TouchableOpacity>
       </View>
 
       <View style={styles.section}>

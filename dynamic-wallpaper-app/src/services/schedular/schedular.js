@@ -1,12 +1,19 @@
+import * as TaskManager from "expo-task-manager";
 import * as BackgroundTask from "expo-background-task";
 import { WALLPAPER_TASK } from "./backgroundTask";
 import { getAutoRotate, getRotationIntervalMinutes } from "../preferences";
 
-// Android WorkManager hard minimum is 15 minutes.
-// shouldRotate() handles finer-grained timing for intervals > 15 min.
-const ANDROID_MIN_INTERVAL_MINUTES = 15;
+// The user's interval is passed to WorkManager as-is (minutes). Modern devices
+// can fire well below the documented 15-minute guideline; the OS still treats
+// the value as a minimum delay, and shouldRotate() enforces the exact timing.
+const MIN_INTERVAL_MINUTES = 1;
 
-export async function registerWallpaperScheduler() {
+// force=false (app start): skip if already registered. Re-registering resets the
+// WorkManager timer, so registering on every app open could push a 24h rotation
+// back indefinitely for a user who opens the app daily.
+// force=true (settings changed): unregister + re-register so the new interval
+// takes effect immediately.
+export async function registerWallpaperScheduler({ force = false } = {}) {
   const autoRotate = await getAutoRotate();
 
   if (!autoRotate) {
@@ -14,11 +21,13 @@ export async function registerWallpaperScheduler() {
     return;
   }
 
-  const intervalMinutes = await getRotationIntervalMinutes();
-  const minimumInterval = Math.max(ANDROID_MIN_INTERVAL_MINUTES, Math.floor(intervalMinutes));
+  if (!force && (await TaskManager.isTaskRegisteredAsync(WALLPAPER_TASK))) {
+    return;
+  }
 
-  // Always unregister first — registerTaskAsync is a no-op if already registered,
-  // so without this the interval change from settings would never take effect.
+  const intervalMinutes = await getRotationIntervalMinutes();
+  const minimumInterval = Math.max(MIN_INTERVAL_MINUTES, Math.floor(intervalMinutes));
+
   await BackgroundTask.unregisterTaskAsync(WALLPAPER_TASK);
   await BackgroundTask.registerTaskAsync(WALLPAPER_TASK, { minimumInterval });
 }

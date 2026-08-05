@@ -10,7 +10,6 @@ import {
   resetRotationIndex,
 } from "../../services/preferences";
 import { registerWallpaperScheduler } from "../../services/schedular/schedular";
-import * as BackgroundTask from "expo-background-task";
 import { ASMA_UL_HUSNA } from "../../data/asmaUlHusna";
 
 export default function SettingsScreen() {
@@ -47,7 +46,7 @@ export default function SettingsScreen() {
   async function handleAutoRotateToggle(value) {
     setAutoRotateState(value);
     await setAutoRotate(value);
-    await registerWallpaperScheduler({ force: true });
+    await registerWallpaperScheduler();
   }
 
   async function handleIntervalSubmit() {
@@ -58,9 +57,9 @@ export default function SettingsScreen() {
     }
     setIntervalMinutesState(String(minutes));
     await setRotationIntervalMinutes(minutes);
-    await registerWallpaperScheduler({ force: true });
+    await registerWallpaperScheduler();
     Keyboard.dismiss();
-    Alert.alert("Saved", `Interval set to ${minutes} minute${minutes !== 1 ? "s" : ""}`);
+    Alert.alert("Saved", `Interval set to ${minutes} min. Android enforces a 15-minute minimum.`);
   }
 
   async function handleResetRotation() {
@@ -115,7 +114,7 @@ export default function SettingsScreen() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Rotation Interval (minutes)</Text>
         <Text style={styles.settingDescription}>
-          In minutes. Examples: 1 = 1 min, 60 = 1 hour, 1440 = 24 hours
+          Minimum 15 minutes (Android limit). Examples: 15 = 15 min, 60 = 1 hour, 1440 = 24 hours
         </Text>
         <View style={styles.inputContainer}>
           <TextInput
@@ -123,7 +122,7 @@ export default function SettingsScreen() {
             value={inputValue}
             onChangeText={setInputValue}
             keyboardType="decimal-pad"
-            placeholder="e.g., 1, 60, 1440"
+            placeholder="e.g., 15, 60, 1440"
             onSubmitEditing={handleIntervalSubmit}
           />
           <TouchableOpacity style={styles.saveButton} onPress={handleIntervalSubmit}>
@@ -156,25 +155,6 @@ export default function SettingsScreen() {
           <Text style={styles.dangerButtonText}>Reset Rotation to First Name</Text>
         </TouchableOpacity>
       </View>
-
-      {__DEV__ && (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Debug</Text>
-          <TouchableOpacity
-            style={styles.debugButton}
-            onPress={async () => {
-              try {
-                const fired = await BackgroundTask.triggerTaskWorkerForTestingAsync();
-                Alert.alert("Debug", fired ? "Task triggered — check for notification" : "Trigger returned false");
-              } catch (e) {
-                Alert.alert("Debug Error", String(e));
-              }
-            }}
-          >
-            <Text style={styles.debugButtonText}>Trigger Background Task Now</Text>
-          </TouchableOpacity>
-        </View>
-      )}
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>About</Text>
@@ -299,18 +279,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#666",
     lineHeight: 22,
-  },
-  debugButton: {
-    backgroundColor: "#e8f4ff",
-    borderRadius: 8,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: "#99ccff",
-  },
-  debugButtonText: {
-    color: "#0055cc",
-    fontSize: 16,
-    fontWeight: "500",
-    textAlign: "center",
   },
 });

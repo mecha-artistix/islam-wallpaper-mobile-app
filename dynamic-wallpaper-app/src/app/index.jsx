@@ -10,9 +10,7 @@ export default function Index() {
   const router = useRouter();
 
   useEffect(() => {
-    registerWallpaperScheduler().catch((e) =>
-      console.error("[Index] scheduler registration failed:", e)
-    );
+    registerWallpaperScheduler();
   }, []);
 
   return (

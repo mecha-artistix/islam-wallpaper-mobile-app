@@ -3,7 +3,7 @@ import { Stack, useLocalSearchParams } from "expo-router";
 import { ActivityIndicator, Alert, Button, Image, StyleSheet, View } from "react-native";
 import { generateWallpaperImage } from "../../services/wallpaper/generator";
 import { setDeviceWallpaper } from "../../services/wallpaper/manager";
-import { setSelectedNameIndex, setLastRotation } from "../../services/preferences";
+import { setSelectedNameIndex } from "../../services/preferences";
 import { ASMA_UL_HUSNA } from "../../data/asmaUlHusna";
 
 export default function IsmPage() {
@@ -37,8 +37,6 @@ export default function IsmPage() {
       await setDeviceWallpaper(previewUri);
       const index = ASMA_UL_HUSNA.findIndex((n) => n.number === ismullah.number);
       if (index !== -1) await setSelectedNameIndex(index);
-      // Stamp last rotation so shouldRotate() won't fire again immediately
-      await setLastRotation(Date.now());
       Alert.alert("Success", "Wallpaper set successfully!");
     } catch (error) {
       Alert.alert("Error", `Failed to set wallpaper: ${error.message}`);

@@ -140,7 +140,6 @@ Settings Screen
 
 ## Current State
 
-
 | Feature | Status |
 |---|---|
 | List 99 names from API | Works |

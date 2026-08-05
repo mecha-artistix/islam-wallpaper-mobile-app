@@ -1,12 +1,16 @@
 import { useEffect, useState } from "react";
-import { Stack, useLocalSearchParams } from "expo-router";
-import { ActivityIndicator, Alert, Button, Image, StyleSheet, View } from "react-native";
+import { Stack, useLocalSearchParams, useRouter } from "expo-router";
+import { ActivityIndicator, Alert, Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { generateWallpaperImage } from "../../services/wallpaper/generator";
 import { setDeviceWallpaper } from "../../services/wallpaper/manager";
 import { setSelectedNameIndex, setLastRotation } from "../../services/preferences";
 import { ASMA_UL_HUSNA } from "../../data/asmaUlHusna";
+import { useTheme } from "../../theme";
 
 export default function IsmPage() {
+  const router = useRouter();
+  const theme = useTheme();
+  const styles = makeStyles(theme);
   const { ism } = useLocalSearchParams();
   const ismullah = JSON.parse(ism);
 
@@ -14,20 +18,18 @@ export default function IsmPage() {
   const [generating, setGenerating] = useState(true);
   const [setting, setSetting] = useState(false);
 
-  async function generatePreview() {
-    setGenerating(true);
-    try {
-      const uri = await generateWallpaperImage(ismullah);
-      setPreviewUri(uri);
-    } catch (error) {
-      Alert.alert("Error", `Failed to generate preview: ${error.message}`);
-    } finally {
-      setGenerating(false);
-    }
-  }
-
   useEffect(() => {
-    generatePreview();
+    (async () => {
+      try {
+        const uri = await generateWallpaperImage(ismullah);
+        setPreviewUri(uri);
+      } catch (error) {
+        Alert.alert("Error", `Failed to generate preview: ${error.message}`);
+      } finally {
+        setGenerating(false);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function handleSetWallpaper() {
@@ -53,31 +55,62 @@ export default function IsmPage() {
       <Stack.Screen options={{ title: ismullah.transliteration }} />
       <View style={styles.container}>
         {generating ? (
-          <ActivityIndicator size="large" color="#ff8c00" style={styles.preview} />
+          <ActivityIndicator size="large" color={theme.accent} style={styles.preview} />
         ) : (
           previewUri && <Image source={{ uri: previewUri }} style={styles.preview} />
         )}
-        <Button
-          title={setting ? "Setting..." : "Set as Wallpaper"}
+        <TouchableOpacity
+          style={[styles.button, styles.buttonPrimary, (generating || setting || !previewUri) && styles.buttonDisabled]}
           onPress={handleSetWallpaper}
           disabled={generating || setting || !previewUri}
-          color="#ff8c00"
-        />
+        >
+          {setting ? <ActivityIndicator color={theme.onAccent} /> : <Text style={[styles.buttonText, styles.buttonPrimaryText]}>Set as Wallpaper</Text>}
+        </TouchableOpacity>
+        <TouchableOpacity style={[styles.button, styles.buttonSecondary]} onPress={() => router.push({ pathname: "/editor", params: { ism } })}>
+          <Text style={styles.buttonText}>Customize</Text>
+        </TouchableOpacity>
       </View>
     </>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 20,
-  },
-  preview: {
-    width: "80%",
-    aspectRatio: 9 / 16,
-    borderRadius: 8,
-  },
-});
+const makeStyles = (theme) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.bg,
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 12,
+      padding: 20,
+    },
+    preview: {
+      width: "80%",
+      aspectRatio: 9 / 16,
+      borderRadius: 16,
+      marginBottom: 8,
+    },
+    button: {
+      alignSelf: "stretch",
+      borderRadius: 12,
+      paddingVertical: 14,
+      alignItems: "center",
+    },
+    buttonPrimary: {
+      backgroundColor: theme.accent,
+    },
+    buttonSecondary: {
+      backgroundColor: theme.cardAlt,
+    },
+    buttonDisabled: {
+      opacity: 0.6,
+    },
+    buttonText: {
+      color: theme.text,
+      fontSize: 15,
+      fontWeight: "600",
+    },
+    buttonPrimaryText: {
+      color: theme.onAccent,
+    },
+  });

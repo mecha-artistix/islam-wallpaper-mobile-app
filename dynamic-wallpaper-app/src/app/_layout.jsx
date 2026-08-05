@@ -1,6 +1,8 @@
 import { Stack } from "expo-router";
-import { StyleSheet } from "react-native";
 import { useEffect } from "react";
+import { StatusBar } from "expo-status-bar";
+import { useColorScheme } from "react-native";
+import { useTheme } from "../theme";
 // Imported at root so TaskManager.defineTask runs before the OS fires the
 // background task in a headless (app-killed) JS context
 import "../services/schedular/backgroundTask";
@@ -15,6 +17,8 @@ const MAX_TICK_MS = 60 * 1000;
 const OFF_RECHECK_MS = 60 * 1000;
 
 export default function RootLayout() {
+  const theme = useTheme();
+  const scheme = useColorScheme();
   // Foreground rotation timer.
   // expo-background-task never runs while the app is in the foreground (native
   // inForeground check in BackgroundTaskScheduler), so without this timer the
@@ -59,25 +63,21 @@ export default function RootLayout() {
   }, []);
 
   return (
-    <Stack
-      styles={styles.container}
-      screenOptions={{
-        headerStyle: { backgroundColor: "#ff8c00" },
-      }}
-    >
-      <Stack.Screen name="index" options={{ title: "Home" }} />
-      <Stack.Screen name="settings" options={{ title: "Settings" }} />
-    </Stack>
+    <>
+      <StatusBar style={scheme === "light" ? "dark" : "light"} />
+      <Stack
+        screenOptions={{
+          headerStyle: { backgroundColor: theme.bg },
+          headerTintColor: theme.text,
+          headerTitleStyle: { fontWeight: "700" },
+          headerShadowVisible: false,
+          contentStyle: { backgroundColor: theme.bg },
+        }}
+      >
+        <Stack.Screen name="index" options={{ title: "Asma ul Husna" }} />
+        <Stack.Screen name="settings" options={{ title: "Settings" }} />
+        <Stack.Screen name="editor" options={{ headerShown: false }} />
+      </Stack>
+    </>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    padding: 16,
-  },
-  header: {
-    fontSize: 24,
-    fontWeight: "bold",
-    marginBottom: 20,
-  },
-});

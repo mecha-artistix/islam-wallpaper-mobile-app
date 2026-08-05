@@ -1,10 +1,10 @@
 import { Stack, useRouter } from "expo-router";
-import { FlatList, Pressable, StyleSheet, Text } from "react-native";
+import { FlatList, Pressable, StyleSheet } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { useEffect } from "react";
 import IsmCard from "../components/IsmCard";
 import { registerWallpaperScheduler } from "../services/schedular/schedular";
-import { Ionicons } from "@expo/vector-icons";
 import { ASMA_UL_HUSNA } from "../data/asmaUlHusna";
-import { useEffect } from "react";
 
 export default function Index() {
   const router = useRouter();
@@ -14,23 +14,23 @@ export default function Index() {
   }, []);
 
   return (
-    <Stack.Screen
-      options={{
-        title: "Asma ul Husna",
-        headerRight: () => (
-          <Pressable onPress={() => router.push("/settings")} style={styles.headerButton}>
-            <Ionicons name="settings-outline" size={28} color="#fff" />
-          </Pressable>
-        ),
-      }}
-    >
+    <>
+      <Stack.Screen
+        options={{
+          headerRight: () => (
+            <Pressable onPress={() => router.push("/settings")} hitSlop={12} style={styles.headerButton}>
+              <Ionicons name="settings-outline" size={22} color="#ff8c00" />
+            </Pressable>
+          ),
+        }}
+      />
       <FlatList
         data={ASMA_UL_HUSNA}
         keyExtractor={(item) => item.number.toString()}
-        contentContainerStyle={styles.container}
-        ListHeaderComponent={<Text style={styles.header}>Asma ul Husna</Text>}
+        contentContainerStyle={styles.list}
         renderItem={({ item }) => (
           <Pressable
+            style={({ pressed }) => pressed && styles.pressed}
             onPress={() =>
               router.push({
                 pathname: "/asmaUlHusna/[ism-number]",
@@ -42,20 +42,19 @@ export default function Index() {
           </Pressable>
         )}
       />
-    </Stack.Screen>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  list: {
     padding: 16,
-  },
-  header: {
-    fontSize: 24,
-    fontWeight: "bold",
-    marginBottom: 20,
+    gap: 10,
   },
   headerButton: {
-    padding: 8,
+    padding: 4,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 });

@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { StyleSheet, View, Text, Switch, TouchableOpacity, Alert, ScrollView, TextInput, Keyboard } from "react-native";
-import { useRouter } from "expo-router";
 import {
   getAutoRotate,
   setAutoRotate,
@@ -13,6 +12,7 @@ import {
 import { registerWallpaperScheduler } from "../../services/schedular/schedular";
 import { rotateWallpaper } from "../../services/wallpaper/rotation";
 import { ASMA_UL_HUSNA } from "../../data/asmaUlHusna";
+import { useTheme } from "../../theme";
 
 function formatLastRotation(timestamp) {
   if (!timestamp) return "Never";
@@ -24,7 +24,8 @@ function formatLastRotation(timestamp) {
 }
 
 export default function SettingsScreen() {
-  const router = useRouter();
+  const theme = useTheme();
+  const styles = makeStyles(theme);
   const [autoRotate, setAutoRotateState] = useState(true);
   const [intervalMinutes, setIntervalMinutesState] = useState("24");
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -133,8 +134,8 @@ export default function SettingsScreen() {
           <Switch
             value={autoRotate}
             onValueChange={handleAutoRotateToggle}
-            trackColor={{ false: "#767577", true: "#ff8c00" }}
-            thumbColor={autoRotate ? "#fff" : "#f4f3f4"}
+            trackColor={{ false: theme.inputBorder, true: theme.accent }}
+            thumbColor="#fff"
           />
         </View>
         <Text style={styles.settingDescription}>
@@ -154,6 +155,7 @@ export default function SettingsScreen() {
             onChangeText={setInputValue}
             keyboardType="decimal-pad"
             placeholder="e.g., 15, 60, 1440"
+            placeholderTextColor={theme.textSecondary}
             onSubmitEditing={handleIntervalSubmit}
           />
           <TouchableOpacity style={styles.saveButton} onPress={handleIntervalSubmit}>
@@ -212,118 +214,116 @@ export default function SettingsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#f5f5f5",
-  },
-  content: {
-    padding: 16,
-    paddingBottom: 40,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  loadingText: {
-    fontSize: 18,
-    color: "#666",
-  },
-  section: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#333",
-    marginBottom: 16,
-  },
-  settingRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  settingLabel: {
-    fontSize: 16,
-    color: "#333",
-  },
-  settingDescription: {
-    fontSize: 13,
-    color: "#888",
-    marginTop: 4,
-    marginBottom: 12,
-  },
-  inputContainer: {
-    flexDirection: "row",
-    gap: 8,
-    alignItems: "center",
-  },
-  textInput: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    backgroundColor: "#fafafa",
-  },
-  saveButton: {
-    backgroundColor: "#ff8c00",
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  saveButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  currentIntervalText: {
-    fontSize: 14,
-    color: "#666",
-    marginTop: 8,
-  },
-  statusRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: "#f0f0f0",
-  },
-  statusLabel: {
-    fontSize: 16,
-    color: "#666",
-  },
-  statusValue: {
-    fontSize: 16,
-    color: "#333",
-    fontWeight: "500",
-  },
-  dangerButton: {
-    backgroundColor: "#fff0f0",
-    borderRadius: 8,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: "#ffcccc",
-  },
-  dangerButtonText: {
-    color: "#cc0000",
-    fontSize: 16,
-    fontWeight: "500",
-    textAlign: "center",
-  },
-  aboutText: {
-    fontSize: 14,
-    color: "#666",
-    lineHeight: 22,
-  },
-});
+const makeStyles = (theme) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.bg,
+    },
+    content: {
+      padding: 16,
+      paddingBottom: 40,
+    },
+    loadingContainer: {
+      flex: 1,
+      backgroundColor: theme.bg,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    loadingText: {
+      fontSize: 16,
+      color: theme.textSecondary,
+    },
+    section: {
+      backgroundColor: theme.card,
+      borderRadius: 14,
+      padding: 16,
+      marginBottom: 12,
+    },
+    sectionTitle: {
+      fontSize: 16,
+      fontWeight: "700",
+      color: theme.text,
+      marginBottom: 12,
+    },
+    settingRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+    },
+    settingLabel: {
+      fontSize: 15,
+      color: theme.text,
+    },
+    settingDescription: {
+      fontSize: 13,
+      color: theme.textSecondary,
+      marginTop: 4,
+      marginBottom: 12,
+    },
+    inputContainer: {
+      flexDirection: "row",
+      gap: 8,
+      alignItems: "center",
+    },
+    textInput: {
+      flex: 1,
+      borderWidth: 1,
+      borderColor: theme.inputBorder,
+      borderRadius: 10,
+      padding: 12,
+      fontSize: 16,
+      color: theme.text,
+      backgroundColor: theme.cardAlt,
+    },
+    saveButton: {
+      backgroundColor: theme.accent,
+      paddingHorizontal: 20,
+      paddingVertical: 12,
+      borderRadius: 10,
+    },
+    saveButtonText: {
+      color: theme.onAccent,
+      fontSize: 15,
+      fontWeight: "600",
+    },
+    currentIntervalText: {
+      fontSize: 13,
+      color: theme.textSecondary,
+      marginTop: 8,
+    },
+    statusRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      paddingVertical: 8,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.border,
+    },
+    statusLabel: {
+      fontSize: 15,
+      color: theme.textSecondary,
+    },
+    statusValue: {
+      fontSize: 15,
+      color: theme.text,
+      fontWeight: "500",
+    },
+    dangerButton: {
+      backgroundColor: theme.dangerBg,
+      borderRadius: 10,
+      padding: 14,
+      borderWidth: 1,
+      borderColor: theme.dangerBorder,
+    },
+    dangerButtonText: {
+      color: theme.danger,
+      fontSize: 15,
+      fontWeight: "600",
+      textAlign: "center",
+    },
+    aboutText: {
+      fontSize: 13,
+      color: theme.textSecondary,
+      lineHeight: 20,
+    },
+  });

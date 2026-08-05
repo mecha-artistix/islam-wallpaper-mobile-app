@@ -17,26 +17,32 @@ src/
     index.jsx                Home: FlatList of 99 names. Registers the background scheduler on mount.
     about.tsx                Empty stub
     asmaUlHusna/
-      [ism-number].jsx       Detail page: Skia preview + "Set as Wallpaper" button
+      [ism-number].jsx       Detail page: Skia preview + "Set as Wallpaper" + "Customize" → /editor
     settings/
       index.jsx              Rotation settings (toggle, interval, reset) + "Rotate Now" test button
+    editor.jsx               Wallpaper editor: live preview + draggable settings sheet (custom header)
     category/                Empty (unused)
   components/
-    IsmCard.jsx              List card (Arabic name, transliteration, translation, meaning)
+    IsmCard.jsx              List card (number badge, transliteration + translation, Arabic name)
+    editor/
+      WallpaperPreview.jsx   Live preview — maps wallpaperSettings to Skia/RN components (no PNG)
+      controls.jsx           Generic editor controls: SliderRow, ColorRow, SegmentedRow, SwitchRow
   data/
     asmaUlHusna.js           Static array ASMA_UL_HUSNA — all 99 names (no API needed)
+  theme.js                   useTheme() — dark/light palette following the system theme (useColorScheme)
   services/
-    preferences.js           All user prefs via expo-secure-store
+    preferences.js           All user prefs via expo-secure-store (+ presets via a JSON file)
     schedular/
       backgroundTask.js      TaskManager.defineTask(WALLPAPER_TASK) — the rotation executor
       schedular.js           registerWallpaperScheduler() — registers/unregisters with the OS
     wallpaper/
       index.js               Re-exports: generateWallpaperImage, setDeviceWallpaper
-      generator.js           generateWallpaperImage(ism) — Skia renderer (1080×1920 PNG)
+      generator.js           generateWallpaperImage(ism, settings?) — Skia renderer (1080×1920 PNG)
       manager.js             setDeviceWallpaper(uri) — bridge to the native module
       rotation.js            rotateWallpaper({force}) — shared rotation routine with in-flight guard
-  utils/
-    getTextColor.js          Black/white text contrast from hex background
+      settings.js            wallpaperSettings model: defaults, built-in presets, mergeSettings()
+      renderSpec.js          buildRenderSpec(settings) — normalizes settings for both renderers
+      fonts.js               FONT_FILES registry (single file or weight map) + resolveFontFile nearest-weight fallback
 modules/
   wallpaper-manager/         Local Expo native module
     android/
@@ -68,12 +74,29 @@ modules/
 
 ### 3. Wallpaper image generation (Skia)
 
-- `src/services/wallpaper/generator.js` → `generateWallpaperImage(ism)`
-  - Draws on a 1080×1920 Skia surface: dark gradient background, Arabic name via the Paragraph API (HarfBuzz shaping, bundled `assets/fonts/NotoNaskhArabic-Regular.ttf` — see `getArabicFontProvider()`), then transliteration, translation, wrapped meaning, and `#number` footer.
+- `src/services/wallpaper/generator.js` → `generateWallpaperImage(ism, settings?)`
+  - Draws on a 1080×1920 Skia surface. **Every visual value — colors, sizes, spacing, alignment, effects — comes from the `wallpaperSettings` object** (see Feature 4); when `settings` is omitted it loads the saved theme via `getWallpaperSettings()` + `mergeSettings()`, so rotation and the detail page always render the user's current theme.
+  - Geometry is normalized by `buildRenderSpec(settings)` in `renderSpec.js` (gradient direction vector, ordered visible text blocks with per-block spacing). The generator only measures text and draws.
+  - Arabic uses the Paragraph API (HarfBuzz shaping); shadow maps to `TextStyle.shadows`. All custom fonts (Arabic and Latin) are registered from the `FONT_FILES` registry (`fonts.js`, backed by `assets/fonts/*.ttf`/`*.otf`) into a single TypefaceFontProvider — see `getFontProvider()`. A registry value is either one file or a weight map (`{ "300": ..., "400": ..., "700": ... }`); `resolveFontFile(family, weight)` picks the exact weight or the nearest available file. Latin blocks use `makeFont()`: system families via `matchFont` (with weight), registry fonts via `Skia.Font(typeface, size)`. Effects are drawn as passes: outline (stroke under-draw) → glow (MaskFilter blur under-draw) → fill with drop-shadow ImageFilter.
   - Encodes to PNG and writes it to the cache directory (`wallpaper_<number>.png`), returns the file URI.
-  - This is the **single source of truth** for wallpaper images — both the detail screen and the background task use it.
+  - This is the **single source of truth** for wallpaper images — the detail screen, the editor, and the background task all use it.
 
-### 4. Automatic rotation
+### 4. Wallpaper customization (the editor)
+
+One object describes the whole appearance: **`wallpaperSettings`**, defined with defaults in `src/services/wallpaper/settings.js` (`DEFAULT_WALLPAPER_SETTINGS`). Sections: `background` (gradient/solid, colors, angle, overlay), `arabic`, `transliteration`, `translation`, `meaning` (font/size/weight/color/opacity per block + visibility), `numberBadge`, `layout` (top offset, per-gap spacing, content width, horizontal align, safe margin), `effects` (shadow/glow/outline).
+
+**Adding a new option requires only:** (1) a property in `DEFAULT_WALLPAPER_SETTINGS`, (2) one control in `editor.jsx`, (3) reading it in `generator.js` / `renderSpec.js`.
+
+- `src/app/editor.jsx` → `WallpaperEditorScreen()` (route `/editor`, opened from the detail page's "Customize" button; the `ism` object is passed as a JSON param)
+  - **Edits the settings object only** — a single `useState` + immutable `setPath(settings, "background.gradient.startColor", value)`; no Skia calls, no rendering logic.
+  - Layout: live preview on top (~60%), a draggable settings sheet (collapsed / medium / expanded snap points via reanimated + gesture-handler), section chips (Themes, Background, Arabic, …, Effects), bottom bar (Reset / Save Preset / Set Wallpaper).
+  - Generic controls in `src/components/editor/controls.jsx`: `SliderRow` (PanResponder slider), `ColorRow` (swatches + hex input), `SegmentedRow`, `SwitchRow`.
+- `src/components/editor/WallpaperPreview.jsx` → **live preview**: maps `buildRenderSpec(settings)` to components — Skia `<Canvas>` for the gradient, RN `<Text>` for the text stack (Arabic uses the expo-font-loaded NotoNaskhArabic). Coordinates scale linearly from the 1080×1920 canvas. It **never regenerates the PNG**; regeneration happens only on "Set Wallpaper". Preview approximations: outline is not shown (RN Text has no stroke), glow is approximated with a same-color text shadow.
+- **Themes**: `BUILT_IN_PRESETS` in `settings.js` (Dark Night, Gold, Minimal, Classic, Modern) are plain `wallpaperSettings` objects applied via `mergeSettings`. User presets are saved through a name-prompt modal.
+- **Persistence** (`preferences.js`): the active theme is stored as JSON in SecureStore key `wallpaper_settings` (`getWallpaperSettings` / `setWallpaperSettings`); `mergeSettings()` deep-merges saved partials over defaults so old saves survive new properties. User presets live in a JSON **file** (`wallpaper_presets.json` in the documents dir — a presets list would exceed SecureStore's ~2KB value limit): `getWallpaperPresets` / `saveWallpaperPreset` / `deleteWallpaperPreset`.
+- **Set Wallpaper** from the editor: persists the theme (`setWallpaperSettings`), renders the PNG with those exact settings, sets it, and updates the rotation index + clock — so background rotation continues with the same theme.
+
+### 5. Automatic rotation
 
 Rotation runs through **two paths that share one routine**, because of a hard native limitation: expo-background-task **never executes while the app is in the foreground** (verified in `BackgroundTaskScheduler.kt` — when `inForeground` is true it just reschedules and returns). Its WorkManager job also requires **network connectivity** (`NetworkType.CONNECTED` constraint).
 
@@ -97,7 +120,7 @@ Callers of `registerWallpaperScheduler`:
 - `src/app/index.jsx` — on mount, default `force: false`.
 - `src/app/settings/index.jsx` — `handleAutoRotateToggle()` and `handleIntervalSubmit()`, both `{ force: true }`.
 
-### 5. Settings
+### 6. Settings
 
 - `src/app/settings/index.jsx` → `SettingsScreen()`
   - Toggle → `setAutoRotate(value)` then `registerWallpaperScheduler({ force: true })`.
@@ -151,7 +174,12 @@ Fine-grained timing is handled client-side: `shouldRotate()` in `preferences.js`
 - `wallpaper_selected_name_index` — integer 0–98, default `0` (`getSelectedNameIndex` / `setSelectedNameIndex`)
 - `wallpaper_rotation_interval_minutes` — float, default `1440` = 24h (`getRotationIntervalMinutes` / `setRotationIntervalMinutes`)
 - `wallpaper_last_rotation` — timestamp ms, default `null` (`getLastRotation` / `setLastRotation`)
+- `wallpaper_settings` — JSON string, the active theme (`getWallpaperSettings` / `setWallpaperSettings`)
 - Compound helpers: `resetRotationIndex()` (index→0, timestamp→now), `shouldRotate()` (auto-rotate on AND interval elapsed)
+
+**Files (not SecureStore):**
+- `wallpaper_presets.json` in the documents directory — user-saved theme presets (`getWallpaperPresets` / `saveWallpaperPreset` / `deleteWallpaperPreset`). A file because a presets list exceeds SecureStore's ~2KB value limit.
+- `wallpaper_<number>.png` in the cache directory — last generated wallpaper image.
 
 ### Data
 All 99 names are stored as a static JS array in `src/data/asmaUlHusna.js`. No API call, no network dependency, no caching needed. Each entry has `number`, `name` (Arabic), `transliteration`, `translation`, `meaning`.
@@ -182,10 +210,22 @@ App Start
 User taps a name card
   └─ [ism-number].jsx
        ├─ on mount: generateWallpaperImage(ism) → PNG in cache → <Image> preview
-       └─ "Set as Wallpaper"
-            ├─ setDeviceWallpaper(uri) → native WallpaperManagerModule (home + lock)
-            ├─ setSelectedNameIndex(index)     (rotation continues from this name)
-            └─ setLastRotation(now)            (restart the rotation clock)
+       ├─ "Set as Wallpaper"
+       │    ├─ setDeviceWallpaper(uri) → native WallpaperManagerModule (home + lock)
+       │    ├─ setSelectedNameIndex(index)     (rotation continues from this name)
+       │    └─ setLastRotation(now)            (restart the rotation clock)
+       └─ "Customize" → /editor (ism passed as JSON param)
+
+Wallpaper Editor (/editor)
+  └─ editor.jsx — edits ONE wallpaperSettings object (useState + setPath)
+       ├─ WallpaperPreview re-renders live from settings (no PNG regeneration)
+       ├─ Themes section applies BUILT_IN_PRESETS / user presets via mergeSettings
+       ├─ "Save Preset" → saveWallpaperPreset (JSON file in documents dir)
+       ├─ "Reset" → DEFAULT_WALLPAPER_SETTINGS
+       └─ "Set Wallpaper"
+            ├─ setWallpaperSettings(settings)   (theme persisted for rotation)
+            ├─ generateWallpaperImage(ism, settings) → setDeviceWallpaper(uri)
+            └─ setSelectedNameIndex + setLastRotation
 
 Rotation — shared routine (services/wallpaper/rotation.js → rotateWallpaper)
   ├─ shouldRotate()?                           (auto-rotate on + interval elapsed; skipped when force=true)
@@ -213,12 +253,13 @@ Settings Screen
 | List 99 names (static data) | Works |
 | Set wallpaper via Skia + native module | Works |
 | Skia preview on detail page | Works |
+| Wallpaper customization (editor, themes, presets) | Works — settings drive generator + rotation |
 | Background rotation | Works — FG timer while app is open + OS task while closed; exact timing via `shouldRotate()` gate |
 | Settings (toggle + interval) | Works — re-registers scheduler with `force: true` |
 | iOS support | No — native module is an empty stub |
-| Font customization | Not built |
-| Text positioning | Not built |
-| Theme / color mode | Not built |
+| Background images / AI backgrounds | Not built (settings model has room: `background.mode`) |
+| Lock/home screen layouts, templates | Not built |
+| Theme / color mode (app UI) | Not built |
 | User auth | Not built |
 | Remote DB for preferences | Not built |
 
@@ -226,8 +267,8 @@ Settings Screen
 
 ## Confirmed Technical Decisions
 
-**Rendering path: Skia only.**
-`generator.js` is the single source of truth for wallpaper image generation. The ViewShot path has been removed. Reason: Skia takes explicit coordinates, font size, and color as parameters — maps directly to form inputs for the customization feature.
+**Rendering path: Skia only, driven by one settings object.**
+`generator.js` is the single source of truth for wallpaper image generation, and every visual value comes from `wallpaperSettings` (`settings.js`) via `buildRenderSpec` (`renderSpec.js`). The editor edits the object only; the live preview (`WallpaperPreview.jsx`) maps the same render spec to RN/Skia components and never regenerates the PNG. This split is what lets a new control ship by touching only: the defaults object, the editor UI, and the renderer.
 
 **Rotation: dual path, one shared routine.**
 expo-background-task never runs while the app is in the foreground (native `inForeground` check) and its WorkManager job requires network connectivity. So rotation is driven by two callers of the single `rotateWallpaper()` routine in `rotation.js`: a `setTimeout` chain in `_layout.jsx` for the foreground case, and the OS task in `backgroundTask.js` for the backgrounded/killed case. Both are gated by `shouldRotate()`, and an in-flight guard prevents double-rotation if both fire at once. Registration is guarded so app opens don't reset the WorkManager timer; only settings changes force a re-registration.
@@ -236,29 +277,23 @@ expo-background-task never runs while the app is in the foreground (native `inFo
 
 ## Roadmap
 
-### 1. Form-Based Wallpaper Customization (next)
+The customization editor (previously roadmap #1) is **built** — see Feature 4. Remaining plans, all designed to fit the settings-object architecture without refactoring:
 
-A settings-style form screen — no visual drag editor. User enters values, taps "Apply", sees a Skia preview, then optionally sets as wallpaper.
+### 1. More background modes and templates
 
-**Controls:**
-- Font family — select from a predefined list (custom fonts must be bundled in `assets/fonts/` and loaded via `expo-font`)
-- Font size — number input
-- Text color — hex input or preset swatches
-- Horizontal position — slider mapping to X offset on Skia canvas
-- Vertical position — slider mapping to Y coordinate on Skia canvas
+`background.mode` already accepts new values: `"image"` (pick a photo as the backdrop) and `"ai"` (generated backgrounds). Also planned: lock/home screen layouts, decorative frames, Quran verse and Hadith templates, stickers, watermark, seasonal/automatic daily themes — each is a new settings section or preset bundle.
 
-**Where settings live:**
-- New keys in `preferences.js`: `wallpaper_font_family`, `wallpaper_font_size`, `wallpaper_text_color`, `wallpaper_text_x`, `wallpaper_text_y`
-- `generator.js` accepts these as parameters (or reads from prefs)
-- Background task picks up these prefs so rotation respects the user's style
+### 2. Preset import/export
 
-### 2. User Authentication
+User presets are already self-contained JSON (`wallpaper_presets.json`) — export/share is a serialization step on top of `getWallpaperPresets`. Favorites per-name also fit here.
+
+### 3. User Authentication
 
 Simple email/phone or social sign-in. Provider not yet decided.
 
-### 3. Remote Database for Preferences
+### 4. Remote Database for Preferences
 
-Store per-user preferences (customization + rotation settings) in a remote DB. Will replace or sync with the current SecureStore-only approach. Keep the data model as a flat key-value or simple JSON object per user to make migration straightforward.
+Store per-user preferences (theme + presets + rotation settings) in a remote DB. Will replace or sync with the current SecureStore/file approach. The settings model is already a flat JSON object per user to keep migration straightforward.
 
 ---
 
@@ -269,3 +304,4 @@ Store per-user preferences (customization + rotation settings) in a remote DB. W
 3. iOS native module (`WallpaperManagerModule.swift`) is an empty stub
 4. The OS background task never runs while the app is in the foreground (by design — the foreground timer in `_layout.jsx` covers that case) and requires network connectivity (expo's WorkManager constraint), so background rotations pause while the device is offline.
 5. Background timing is inexact — Android treats `minimumInterval` as a minimum delay and may defer execution depending on doze/OEM battery savers.
+6. Editor live-preview approximations (final PNG is always exact): outline is not previewed (RN Text has no stroke), glow is approximated with a same-color text shadow, and glow/outline don't apply to the Arabic block (Skia Paragraph supports shadows only).

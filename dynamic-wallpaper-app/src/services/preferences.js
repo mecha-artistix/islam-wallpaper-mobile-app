@@ -7,6 +7,7 @@ const KEYS = {
   ROTATION_INTERVAL_MINUTES: "wallpaper_rotation_interval_minutes",
   LAST_ROTATION: "wallpaper_last_rotation",
   WALLPAPER_SETTINGS: "wallpaper_settings",
+  NOTIFICATION_SETTINGS: "notification_settings",
 };
 
 // User-saved presets live in a file, not SecureStore — a presets list quickly
@@ -80,6 +81,29 @@ export async function getWallpaperSettings() {
 
 export async function setWallpaperSettings(settings) {
   await SecureStore.setItemAsync(KEYS.WALLPAPER_SETTINGS, JSON.stringify(settings));
+}
+
+// Notification preferences: one JSON object so new notification types are just
+// a new key here + a toggle in the notifications settings screen.
+const DEFAULT_NOTIFICATION_SETTINGS = {
+  wallpaperChange: false,
+};
+
+export async function getNotificationSettings() {
+  const raw = await SecureStore.getItemAsync(KEYS.NOTIFICATION_SETTINGS);
+  if (!raw) return { ...DEFAULT_NOTIFICATION_SETTINGS };
+  try {
+    return { ...DEFAULT_NOTIFICATION_SETTINGS, ...JSON.parse(raw) };
+  } catch {
+    return { ...DEFAULT_NOTIFICATION_SETTINGS };
+  }
+}
+
+export async function setNotificationSetting(key, value) {
+  const current = await getNotificationSettings();
+  const next = { ...current, [key]: value };
+  await SecureStore.setItemAsync(KEYS.NOTIFICATION_SETTINGS, JSON.stringify(next));
+  return next;
 }
 
 // User presets: array of { name, settings }. Built-in presets are NOT stored —

@@ -4,6 +4,7 @@ import { ActivityIndicator, Alert, Image, StyleSheet, Text, TouchableOpacity, Vi
 import { generateWallpaperImage } from "../../services/wallpaper/generator";
 import { setDeviceWallpaper } from "../../services/wallpaper/manager";
 import { setSelectedNameIndex, setLastRotation } from "../../services/preferences";
+import { notifyWallpaperChanged } from "../../services/notifications";
 import { ASMA_UL_HUSNA } from "../../data/asmaUlHusna";
 import { useTheme } from "../../theme";
 
@@ -42,6 +43,7 @@ export default function IsmPage() {
       // Restart the rotation clock — otherwise an auto-rotation could fire
       // seconds after the user manually picks a name
       await setLastRotation(Date.now());
+      await notifyWallpaperChanged(ismullah);
       Alert.alert("Success", "Wallpaper set successfully!");
     } catch (error) {
       Alert.alert("Error", `Failed to set wallpaper: ${error.message}`);

@@ -20,6 +20,7 @@ src/
       [ism-number].jsx       Detail page: Skia preview + "Set as Wallpaper" + "Customize" → /editor
     settings/
       index.jsx              Rotation settings (toggle, interval, reset) + "Rotate Now" test button
+      notifications.jsx      Notification settings — toggles stored in the notification_settings object
     editor.jsx               Wallpaper editor: live preview + draggable settings sheet (custom header)
     category/                Empty (unused)
   components/
@@ -32,6 +33,7 @@ src/
   theme.js                   useTheme() — dark/light palette following the system theme (useColorScheme)
   services/
     preferences.js           All user prefs via expo-secure-store (+ presets via a JSON file)
+    notifications.js         Local notifications: ensureNotificationPermission(), notifyWallpaperChanged()
     schedular/
       backgroundTask.js      TaskManager.defineTask(WALLPAPER_TASK) — the rotation executor
       schedular.js           registerWallpaperScheduler() — registers/unregisters with the OS

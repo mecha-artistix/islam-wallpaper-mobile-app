@@ -10,7 +10,9 @@ const MIN_INTERVAL_MINUTES = 1;
 
 // force=false (app start): skip if already registered. Re-registering resets the
 // WorkManager timer, so registering on every app open could push a 24h rotation
-// back indefinitely for a user who opens the app daily.
+// back indefinitely for a user who opens the app daily. It would also corrupt
+// the native registration counter (BackgroundTaskScheduler counts registerTask
+// calls in-memory and only schedules when it hits exactly 1).
 // force=true (settings changed): unregister + re-register so the new interval
 // takes effect immediately.
 export async function registerWallpaperScheduler({ force = false } = {}) {

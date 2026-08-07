@@ -7,6 +7,7 @@ import {
 } from "../preferences";
 import { generateWallpaperImage } from "./generator";
 import { setDeviceWallpaper } from "./manager";
+import { notifyWallpaperChanged } from "../notifications";
 
 // Single rotation implementation shared by the OS background task
 // (schedular/backgroundTask.js), the foreground timer (app/_layout.jsx), and
@@ -39,6 +40,8 @@ export async function rotateWallpaper({ force = false } = {}) {
     await setDeviceWallpaper(uri);
     await setSelectedNameIndex(nextIndex);
     await setLastRotation(Date.now());
+    // Respects the user's notification settings; no-op when disabled
+    await notifyWallpaperChanged(name);
 
     console.log("[Rotation] ✓ done");
     return name;

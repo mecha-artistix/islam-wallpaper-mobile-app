@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { StyleSheet, View, Text, Switch, TouchableOpacity, Alert, ScrollView, TextInput, Keyboard } from "react-native";
+import { useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import {
   getAutoRotate,
   setAutoRotate,
@@ -10,7 +12,11 @@ import {
   resetRotationIndex,
 } from "../../services/preferences";
 import { registerWallpaperScheduler } from "../../services/schedular/schedular";
+import { isTaskRegisteredAsync } from "expo-task-manager";
+import { getStatusAsync, BackgroundTaskStatus } from "expo-background-task";
+import { WALLPAPER_TASK } from "../../services/schedular/backgroundTask";
 import { rotateWallpaper } from "../../services/wallpaper/rotation";
+import { sendAppNotification } from "../../services/notifications";
 import { ASMA_UL_HUSNA } from "../../data/asmaUlHusna";
 import { useTheme } from "../../theme";
 
@@ -24,12 +30,15 @@ function formatLastRotation(timestamp) {
 }
 
 export default function SettingsScreen() {
+  const router = useRouter();
   const theme = useTheme();
   const styles = makeStyles(theme);
   const [autoRotate, setAutoRotateState] = useState(true);
   const [intervalMinutes, setIntervalMinutesState] = useState("24");
   const [currentIndex, setCurrentIndex] = useState(0);
   const [lastRotation, setLastRotationState] = useState(null);
+  const [osTaskRegistered, setOsTaskRegistered] = useState(null);
+  const [osTaskStatus, setOsTaskStatus] = useState(null);
   const totalNames = ASMA_UL_HUSNA.length;
   const [loading, setLoading] = useState(true);
   const [inputValue, setInputValue] = useState("");
@@ -40,17 +49,21 @@ export default function SettingsScreen() {
 
   async function loadSettings() {
     try {
-      const [auto, interval, index, last] = await Promise.all([
+      const [auto, interval, index, last, registered, status] = await Promise.all([
         getAutoRotate(),
         getRotationIntervalMinutes(),
         getSelectedNameIndex(),
         getLastRotation(),
+        isTaskRegisteredAsync(WALLPAPER_TASK),
+        getStatusAsync(),
       ]);
       setAutoRotateState(auto ?? true);
       setIntervalMinutesState(String(interval));
       setInputValue(String(interval));
       setCurrentIndex(index);
       setLastRotationState(last);
+      setOsTaskRegistered(registered);
+      setOsTaskStatus(status);
     } catch (e) {
       console.error("Failed to load settings:", e);
     } finally {
@@ -117,6 +130,16 @@ export default function SettingsScreen() {
     }
   }
 
+  async function handleTestNotification() {
+    const sent = await sendAppNotification("Test Notification", "Notifications are working.");
+    if (!sent) {
+      Alert.alert(
+        "Not Sent",
+        "The notification could not be shown — most likely the system notification permission is denied. Enable notifications for this app in system settings, then try again."
+      );
+    }
+  }
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -168,6 +191,16 @@ export default function SettingsScreen() {
       </View>
 
       <View style={styles.section}>
+        <TouchableOpacity style={styles.linkRow} onPress={() => router.push("/settings/notifications")}>
+          <View style={styles.linkText}>
+            <Text style={styles.settingLabel}>Notifications</Text>
+            <Text style={[styles.settingDescription, styles.linkDescription]}>Wallpaper change alerts and more</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color={theme.textSecondary} />
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.section}>
         <Text style={styles.sectionTitle}>Current Status</Text>
         <View style={styles.statusRow}>
           <Text style={styles.statusLabel}>Current Name Index</Text>
@@ -185,6 +218,24 @@ export default function SettingsScreen() {
           <Text style={styles.statusLabel}>Last Rotation</Text>
           <Text style={styles.statusValue}>{formatLastRotation(lastRotation)}</Text>
         </View>
+        <View style={styles.statusRow}>
+          <Text style={styles.statusLabel}>OS Task Registered</Text>
+          <Text style={styles.statusValue}>
+            {osTaskRegistered === null ? "…" : osTaskRegistered ? "Yes" : "No"}
+          </Text>
+        </View>
+        <View style={styles.statusRow}>
+          <Text style={styles.statusLabel}>OS Task Status</Text>
+          <Text style={styles.statusValue}>
+            {osTaskStatus === BackgroundTaskStatus.Available
+              ? "Available"
+              : osTaskStatus === BackgroundTaskStatus.Restricted
+                ? "Restricted (battery/OEM)"
+                : osTaskStatus === null
+                  ? "…"
+                  : "Unavailable"}
+          </Text>
+        </View>
       </View>
 
       <View style={styles.section}>
@@ -195,6 +246,9 @@ export default function SettingsScreen() {
         </Text>
         <TouchableOpacity style={styles.saveButton} onPress={handleRotateNow}>
           <Text style={styles.saveButtonText}>Rotate Now</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={[styles.saveButton, styles.testButton]} onPress={handleTestNotification}>
+          <Text style={styles.saveButtonText}>Test Notification</Text>
         </TouchableOpacity>
       </View>
 
@@ -261,6 +315,17 @@ const makeStyles = (theme) =>
       marginTop: 4,
       marginBottom: 12,
     },
+    linkRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+    },
+    linkText: {
+      flex: 1,
+    },
+    linkDescription: {
+      marginBottom: 0,
+    },
     inputContainer: {
       flexDirection: "row",
       gap: 8,
@@ -281,6 +346,10 @@ const makeStyles = (theme) =>
       paddingHorizontal: 20,
       paddingVertical: 12,
       borderRadius: 10,
+      alignItems: "center",
+    },
+    testButton: {
+      marginTop: 8,
     },
     saveButtonText: {
       color: theme.onAccent,

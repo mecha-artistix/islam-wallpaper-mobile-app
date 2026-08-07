@@ -76,6 +76,7 @@ export default function RootLayout() {
       >
         <Stack.Screen name="index" options={{ title: "Asma ul Husna" }} />
         <Stack.Screen name="settings" options={{ title: "Settings" }} />
+        <Stack.Screen name="settings/notifications" options={{ title: "Notifications" }} />
         <Stack.Screen name="editor" options={{ headerShown: false }} />
       </Stack>
     </>

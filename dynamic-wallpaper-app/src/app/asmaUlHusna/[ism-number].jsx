@@ -2,9 +2,7 @@ import { useEffect, useState } from "react";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { ActivityIndicator, Alert, Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { generateWallpaperImage } from "../../services/wallpaper/generator";
-import { setDeviceWallpaper } from "../../services/wallpaper/manager";
-import { setSelectedNameIndex, setLastRotation } from "../../services/preferences";
-import { notifyWallpaperChanged } from "../../services/notifications";
+import { applyWallpaper } from "../../services/wallpaper/rotation";
 import { ASMA_UL_HUSNA } from "../../data/asmaUlHusna";
 import { useTheme } from "../../theme";
 
@@ -37,13 +35,8 @@ export default function IsmPage() {
     if (!previewUri) return;
     setSetting(true);
     try {
-      await setDeviceWallpaper(previewUri);
       const index = ASMA_UL_HUSNA.findIndex((n) => n.number === ismullah.number);
-      if (index !== -1) await setSelectedNameIndex(index);
-      // Restart the rotation clock — otherwise an auto-rotation could fire
-      // seconds after the user manually picks a name
-      await setLastRotation(Date.now());
-      await notifyWallpaperChanged(ismullah);
+      await applyWallpaper({ uri: previewUri, name: ismullah, index, source: "manual" });
       Alert.alert("Success", "Wallpaper set successfully!");
     } catch (error) {
       Alert.alert("Error", `Failed to set wallpaper: ${error.message}`);

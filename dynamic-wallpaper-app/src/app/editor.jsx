@@ -30,18 +30,15 @@ import {
 } from "../services/wallpaper/settings";
 import { generateWallpaperImage } from "../services/wallpaper/generator";
 import { EXPO_FONTS } from "../services/wallpaper/fonts";
-import { setDeviceWallpaper } from "../services/wallpaper/manager";
+import { applyWallpaper } from "../services/wallpaper/rotation";
 import {
   getWallpaperSettings,
   setWallpaperSettings,
   getWallpaperPresets,
   saveWallpaperPreset,
   deleteWallpaperPreset,
-  setSelectedNameIndex,
-  setLastRotation,
 } from "../services/preferences";
 import { ASMA_UL_HUSNA } from "../data/asmaUlHusna";
-import { notifyWallpaperChanged } from "../services/notifications";
 import { useTheme } from "../theme";
 
 const { height: SCREEN_H } = Dimensions.get("window");
@@ -134,11 +131,8 @@ export default function WallpaperEditorScreen() {
     try {
       await setWallpaperSettings(settings);
       const uri = await generateWallpaperImage(ism, settings);
-      await setDeviceWallpaper(uri);
       const index = ASMA_UL_HUSNA.findIndex((n) => n.number === ism.number);
-      if (index !== -1) await setSelectedNameIndex(index);
-      await setLastRotation(Date.now());
-      await notifyWallpaperChanged(ism);
+      await applyWallpaper({ uri, name: ism, index, source: "manual" });
       Alert.alert("Success", "Wallpaper set — saved theme will also be used for rotation.");
     } catch (e) {
       Alert.alert("Error", `Failed to set wallpaper: ${e.message}`);

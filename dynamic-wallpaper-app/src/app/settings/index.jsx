@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { StyleSheet, View, Text, Switch, TouchableOpacity, Alert, ScrollView, TextInput, Keyboard } from "react-native";
+import { StyleSheet, View, Text, Switch, TouchableOpacity, Alert, ScrollView, TextInput, Keyboard, Button } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import {
@@ -14,7 +14,7 @@ import {
 import { registerWallpaperScheduler } from "../../services/schedular/schedular";
 import { isTaskRegisteredAsync } from "expo-task-manager";
 import { getStatusAsync, BackgroundTaskStatus } from "expo-background-task";
-import { WALLPAPER_TASK } from "../../services/schedular/backgroundTask";
+import { runWallpaperBackgroundTask, WALLPAPER_TASK } from "../../services/schedular/backgroundTask";
 import { rotateWallpaper } from "../../services/wallpaper/rotation";
 import { sendAppNotification } from "../../services/notifications";
 import { ASMA_UL_HUSNA } from "../../data/asmaUlHusna";
@@ -118,7 +118,7 @@ export default function SettingsScreen() {
 
   async function handleRotateNow() {
     try {
-      const name = await rotateWallpaper({ force: true });
+      const name = await rotateWallpaper({ force: true, source: "test" });
       if (name) {
         await loadSettings();
         Alert.alert("Rotated", `Wallpaper set to ${name.transliteration}`);
@@ -201,6 +201,18 @@ export default function SettingsScreen() {
       </View>
 
       <View style={styles.section}>
+        <TouchableOpacity style={styles.linkRow} onPress={() => router.push("/settings/logs")}>
+          <View style={styles.linkText}>
+            <Text style={styles.settingLabel}>Debug Logs</Text>
+            <Text style={[styles.settingDescription, styles.linkDescription]}>
+              Every wallpaper change and background task run, with its source
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color={theme.textSecondary} />
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.section}>
         <Text style={styles.sectionTitle}>Current Status</Text>
         <View style={styles.statusRow}>
           <Text style={styles.statusLabel}>Current Name Index</Text>
@@ -244,12 +256,26 @@ export default function SettingsScreen() {
           Rotates immediately, ignoring the interval. The OS background task only fires while the
           app is closed and the device has network — use this to verify rotation works end to end.
         </Text>
+
         <TouchableOpacity style={styles.saveButton} onPress={handleRotateNow}>
           <Text style={styles.saveButtonText}>Rotate Now</Text>
         </TouchableOpacity>
+        <Button
+        style={styles.saveButton}
+          title="Test Background Task"
+          onPress={()=> {
+            console.log("Running background task manually for testing...");
+            runWallpaperBackgroundTask();
+          }}
+        />
+        {/* <TouchableOpacity style={styles.saveButton} onPress={runWallpaperBackgroundTask}>
+          <Text style={styles.saveButtonText}>Run Background Task</Text>
+        </TouchableOpacity> */}
+      
         <TouchableOpacity style={[styles.saveButton, styles.testButton]} onPress={handleTestNotification}>
           <Text style={styles.saveButtonText}>Test Notification</Text>
         </TouchableOpacity>
+
       </View>
 
       <View style={styles.section}>

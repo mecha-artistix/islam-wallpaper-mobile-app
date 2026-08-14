@@ -19,7 +19,9 @@ export async function registerWallpaperScheduler({ force = false } = {}) {
   const autoRotate = await getAutoRotate();
 
   if (!autoRotate) {
-    await BackgroundTask.unregisterTaskAsync(WALLPAPER_TASK);
+    if (await TaskManager.isTaskRegisteredAsync(WALLPAPER_TASK)) {
+      await BackgroundTask.unregisterTaskAsync(WALLPAPER_TASK);
+    }
     return;
   }
 
@@ -30,6 +32,10 @@ export async function registerWallpaperScheduler({ force = false } = {}) {
   const intervalMinutes = await getRotationIntervalMinutes();
   const minimumInterval = Math.max(MIN_INTERVAL_MINUTES, Math.floor(intervalMinutes));
 
-  await BackgroundTask.unregisterTaskAsync(WALLPAPER_TASK);
+  // Unregistering a task that was never registered rejects — without this guard
+  // the register call below never runs on a fresh install and nothing is scheduled.
+  if (await TaskManager.isTaskRegisteredAsync(WALLPAPER_TASK)) {
+    await BackgroundTask.unregisterTaskAsync(WALLPAPER_TASK);
+  }
   await BackgroundTask.registerTaskAsync(WALLPAPER_TASK, { minimumInterval });
 }

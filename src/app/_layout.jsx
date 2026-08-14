@@ -2,9 +2,10 @@ import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useColorScheme } from "react-native";
 import { useTheme } from "../theme";
-// Imported at root so TaskManager.defineTask runs before the OS fires the
-// background task in a headless (app-killed) JS context
-import "../services/schedular/backgroundTask";
+// Note: TaskManager.defineTask is registered from the JS entry (index.js), not
+// here. Expo Router only evaluates layout files when ExpoRoot mounts, which
+// never happens in a headless (app-closed) JS context — so a side-effect import
+// here would NOT register the task consumer headlessly.
 
 export default function RootLayout() {
   const theme = useTheme();

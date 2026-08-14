@@ -11,9 +11,11 @@ A lightweight Android app that sets one of the 99 Names of Allah (Asma ul Husna)
 ```
 src/
   app/
-    _layout.jsx              Root navigation (Stack, orange header). Imports backgroundTask at
-                             root (so TaskManager.defineTask runs in headless contexts) and
-                             runs the foreground rotation timer.
+    index.js                 JS entry point (package.json#main). Imports backgroundTask.js BEFORE
+                             expo-router/entry so TaskManager.defineTask runs even in a headless
+                             (app-closed) JS context. (Layout files are NOT evaluated headlessly.)
+    _layout.jsx              Root navigation (Stack, orange header). No side-effect imports here —
+                             the background-task consumer is registered in index.js, not in a layout.
     index.jsx                Home: FlatList of 99 names. Registers the background scheduler on mount.
     about.tsx                Empty stub
     asmaUlHusna/
@@ -107,11 +109,11 @@ Rotation runs through **two paths that share one routine**, because of a hard na
   - An in-flight guard prevents the FG timer and the OS task from double-advancing the index if both fire simultaneously.
   - Steps: advance index circularly `(current + 1) % 99` → `generateWallpaperImage(name)` → `setDeviceWallpaper(uri)` → persist `setSelectedNameIndex` + `setLastRotation`.
 
-**Path A — foreground timer** (`src/app/_layout.jsx`, in `RootLayout`'s `useEffect`):
-A `setTimeout` chain that wakes at the next interval boundary (capped at 60 s so settings changes take effect within a minute) and calls `rotateWallpaper()`. When auto-rotate is off it wakes every 60 s anyway, so toggling it on in settings takes effect without an app restart. Covers the "app is open" case.
+**Path A — foreground (app open)**:
+There is currently NO foreground rotation timer in `_layout.jsx`. While the app is open, the only automatic rotation is the OS background task's queued firings flushed at app open (plus the manual "Rotate Now" button in settings). (A `setTimeout` foreground timer was documented in earlier versions of this file but was never present in the code.)
 
 **Path B — OS background task** (covers backgrounded/killed app):
-- `src/services/schedular/backgroundTask.js` — `TaskManager.defineTask(WALLPAPER_TASK, ...)` calls `rotateWallpaper()`. Imported at the top of `_layout.jsx` so `defineTask` runs in a headless (app-killed) JS context. On Android 8+ the library chains `OneTimeWorkRequest`s with `initialDelay = interval`, so sub-15-minute intervals work; pre-Android-8 falls back to `PeriodicWorkRequest` (15-min floor).
+- `src/services/schedular/backgroundTask.js` — `TaskManager.defineTask(WALLPAPER_TASK, ...)` calls `rotateWallpaper()`. Imported from the JS entry (`index.js`, BEFORE `expo-router/entry`) so `defineTask` runs in a headless (app-killed) JS context. Importing it from `_layout.jsx` does NOT work — Expo Router only evaluates layout files when ExpoRoot mounts, which never happens headlessly; that was the root cause of background rotation never firing while the app was closed. On Android 8+ the library chains `OneTimeWorkRequest`s with `initialDelay = interval`, so sub-15-minute intervals work; pre-Android-8 falls back to `PeriodicWorkRequest` (15-min floor).
 - `src/services/schedular/schedular.js` — `registerWallpaperScheduler({ force = false } = {})`:
   - If auto-rotate is off → unregisters and returns.
   - `force=false` (app start, from `index.jsx`): skips if already registered (`TaskManager.isTaskRegisteredAsync`). Re-registering resets the WorkManager timer, so without this guard a daily app opener could push a 24h rotation back indefinitely.
@@ -202,9 +204,10 @@ All 99 names are stored as a static JS array in `src/data/asmaUlHusna.js`. No AP
 
 ```
 App Start
-  └─ _layout.jsx
-       ├─ imports backgroundTask.js → TaskManager.defineTask(WALLPAPER_TASK) registered
-       └─ starts foreground rotation timer (setTimeout chain → rotateWallpaper())
+  └─ index.js (JS entry — package.json#main)
+       └─ imports backgroundTask.js → TaskManager.defineTask(WALLPAPER_TASK) registered
+          (must run here, not in a layout, so it executes in headless contexts too)
+  └─ _layout.jsx  (root navigation only — no side-effect imports)
   └─ index.jsx
        ├─ render FlatList of ASMA_UL_HUSNA via IsmCard
        └─ registerWallpaperScheduler()          (force=false — skips if already registered)
@@ -273,7 +276,7 @@ Settings Screen
 `generator.js` is the single source of truth for wallpaper image generation, and every visual value comes from `wallpaperSettings` (`settings.js`) via `buildRenderSpec` (`renderSpec.js`). The editor edits the object only; the live preview (`WallpaperPreview.jsx`) maps the same render spec to RN/Skia components and never regenerates the PNG. This split is what lets a new control ship by touching only: the defaults object, the editor UI, and the renderer.
 
 **Rotation: dual path, one shared routine.**
-expo-background-task never runs while the app is in the foreground (native `inForeground` check) and its WorkManager job requires network connectivity. So rotation is driven by two callers of the single `rotateWallpaper()` routine in `rotation.js`: a `setTimeout` chain in `_layout.jsx` for the foreground case, and the OS task in `backgroundTask.js` for the backgrounded/killed case. Both are gated by `shouldRotate()`, and an in-flight guard prevents double-rotation if both fire at once. Registration is guarded so app opens don't reset the WorkManager timer; only settings changes force a re-registration.
+expo-background-task never runs while the app is in the foreground (native `inForeground` check) and its WorkManager job requires network connectivity. `defineTask` is invoked from the JS entry (`index.js`, before `expo-router/entry`) so the task consumer is registered even in a headless (app-closed) context — placing it in a layout file does NOT work, because Expo Router only evaluates layout modules when ExpoRoot mounts, which never happens headlessly. (This was the root cause of background rotation never firing while the app was closed: the consumer was registered via a `_layout.jsx` side-effect import, which never ran headlessly, so WorkManager firings queued and flushed as a burst at the next foreground launch.) Rotation while the app is open is currently driven only by queued background-task firings flushed at app open plus the manual "Rotate Now" button (no foreground timer exists). Registration is guarded so app opens don't reset the WorkManager timer; only settings changes force a re-registration.
 
 ---
 
@@ -304,6 +307,6 @@ Store per-user preferences (theme + presets + rotation settings) in a remote DB.
 1. `about.tsx` is empty
 2. `category/` route is empty
 3. iOS native module (`WallpaperManagerModule.swift`) is an empty stub
-4. The OS background task never runs while the app is in the foreground (by design — the foreground timer in `_layout.jsx` covers that case) and requires network connectivity (expo's WorkManager constraint), so background rotations pause while the device is offline.
+4. The OS background task never runs while the app is in the foreground (by design) and requires network connectivity (expo's WorkManager constraint), so background rotations pause while the device is offline. There is no separate foreground rotation timer — while the app is open, automatic rotation only happens via queued background-task firings flushed at app open (plus the manual "Rotate Now" button). To rotate on an exact schedule while open, a foreground `setTimeout` chain in `_layout.jsx` would need to be added.
 5. Background timing is inexact — Android treats `minimumInterval` as a minimum delay and may defer execution depending on doze/OEM battery savers.
 6. Editor live-preview approximations (final PNG is always exact): outline is not previewed (RN Text has no stroke), glow is approximated with a same-color text shadow, and glow/outline don't apply to the Arabic block (Skia Paragraph supports shadows only).

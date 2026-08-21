@@ -1,16 +1,17 @@
 import { useEffect, useState } from "react";
 import { Alert, ScrollView, StyleSheet, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { getNotificationSettings, setNotificationSetting } from "../services/preferences";
 import { ensureNotificationPermission } from "../services/notifications";
 import { Card, SectionLabel, SwitchRow } from "../components/ui";
-import { useTheme, spacing } from "../theme";
+import { useTheme, spacing, layout } from "../theme";
 
 // Notifications settings — a single, calm toggle for wallpaper-change alerts.
 // More notification types can be added as new keys in notification_settings +
 // a row here; the underlying storage already supports it.
 export default function NotificationsScreen() {
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
   const s = makeStyles(theme);
   const [settings, setSettings] = useState(null);
 
@@ -32,8 +33,8 @@ export default function NotificationsScreen() {
   if (!settings) return <View style={s.container} />;
 
   return (
-    <SafeAreaView style={s.container} edges={["top"]}>
-      <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
+    <SafeAreaView style={s.container} edges={["top", "bottom"]}>
+      <ScrollView contentContainerStyle={[s.scroll, { paddingBottom: layout.scrollBottomPushed + insets.bottom }]} showsVerticalScrollIndicator={false}>
         <SectionLabel>Wallpaper</SectionLabel>
         <Card>
           <SwitchRow
@@ -51,5 +52,5 @@ export default function NotificationsScreen() {
 const makeStyles = (theme) =>
   StyleSheet.create({
     container: { flex: 1, backgroundColor: theme.bg },
-    scroll: { paddingHorizontal: spacing.xl, paddingBottom: spacing.xxxl + 16, paddingTop: spacing.lg },
+    scroll: { paddingHorizontal: layout.screenPaddingH, paddingTop: spacing.lg },
   });

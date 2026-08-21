@@ -1,6 +1,6 @@
 import { ActivityIndicator, Pressable, StyleSheet, Switch, Text, TextInput, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useTheme, spacing, radii, type } from "../../theme";
+import { useTheme, spacing, radii, type, layout } from "../../theme";
 
 // ─── Button ───────────────────────────────────────────────────────────────────
 // Variants:
@@ -274,8 +274,8 @@ const makeStyles = (theme) =>
       overflow: "hidden",
     },
     rowPress: {
-      paddingVertical: 14,
-      paddingHorizontal: spacing.lg,
+      paddingVertical: layout.rowPaddingV,
+      paddingHorizontal: layout.cardPadding,
     },
     rowPressed: { opacity: 0.6 },
     row: {

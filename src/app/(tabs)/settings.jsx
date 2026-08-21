@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Alert, Keyboard, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect, useRouter } from "expo-router";
 import {
   getAutoRotate,
@@ -13,7 +13,7 @@ import {
 } from "../../services/preferences";
 import { registerWallpaperScheduler } from "../../services/schedular/schedular";
 import { ASMA_UL_HUSNA } from "../../data/asmaUlHusna";
-import { useTheme, spacing, type } from "../../theme";
+import { useTheme, spacing, type, layout } from "../../theme";
 import { Card, Row, SectionLabel, SwitchRow, Segmented, Button } from "../../components/ui";
 
 // Settings hub — grouped into a few simple sections: Profile, Wallpaper,
@@ -35,6 +35,7 @@ const MIN_USER_INTERVAL_MINUTES = 1;
 export default function SettingsScreen() {
   const router = useRouter();
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
   const s = makeStyles(theme);
 
   const [profile, setProfileState] = useState({ name: null, email: null });
@@ -131,7 +132,7 @@ export default function SettingsScreen() {
 
   return (
     <SafeAreaView style={s.container} edges={["top"]}>
-      <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[s.scroll, { paddingBottom: layout.scrollBottomTab + insets.bottom }]} showsVerticalScrollIndicator={false}>
         <Text style={s.title}>Settings</Text>
 
         {/* ── Current state (at-a-glance) ── */}
@@ -299,17 +300,17 @@ function formatLastRotation(timestamp) {
 const makeStyles = (theme) =>
   StyleSheet.create({
     container: { flex: 1, backgroundColor: theme.bg },
-    scroll: { paddingHorizontal: spacing.xl, paddingBottom: spacing.xxxl + 16 },
+    scroll: { paddingHorizontal: layout.screenPaddingH },
     title: {
       color: theme.text,
       fontSize: type.display,
       fontWeight: "600",
       letterSpacing: -0.3,
-      paddingTop: spacing.lg,
+      paddingTop: layout.sectionGap,
       paddingBottom: spacing.sm,
     },
     linkCard: { marginTop: spacing.sm },
-    intervalBlock: { paddingTop: spacing.md, paddingBottom: spacing.sm },
+    intervalBlock: { paddingTop: spacing.md, paddingBottom: 0 },
     intervalLabel: {
       color: theme.textSecondary,
       fontSize: type.caption,
@@ -345,7 +346,7 @@ const makeStyles = (theme) =>
       color: theme.textTertiary,
       fontSize: type.caption,
       lineHeight: 17,
-      marginTop: spacing.sm,
+      marginTop: spacing.xs,
     },
     versionText: { color: theme.textSecondary, fontSize: type.body },
     stateValue: {

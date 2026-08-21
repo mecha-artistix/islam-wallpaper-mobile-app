@@ -41,7 +41,8 @@
       "expo-sharing",
       "expo-secure-store",
       "expo-background-task",
-      "expo-notifications"
+      "expo-notifications",
+      "expo-alarm"
     ],
     "experiments": {
       "typedRoutes": true,

@@ -14,14 +14,15 @@ import { useColorScheme } from "react-native";
 // ─────────────────────────────────────────────────────────────────────────────
 
 // Spacing scale (4-step base). Used everywhere for consistent rhythm.
+// Kept NARROW on purpose — the app favors tight, calm density over airy gaps.
 export const spacing = {
   xs: 4,
   sm: 8,
   md: 12,
   lg: 16,
-  xl: 24,
-  xxl: 32,
-  xxxl: 48,
+  xl: 20,
+  xxl: 28,
+  xxxl: 40,
 };
 
 // Radii.
@@ -36,16 +37,35 @@ export const radii = {
 // Typography scale. Display sizes are for hero Arabic / large headlines.
 export const type = {
   // Arabic — large, beautiful, the visual anchor of most screens.
-  arabicHero: 64,
-  arabicLarge: 48,
-  arabicMedium: 34,
+  arabicHero: 60,
+  arabicLarge: 44,
+  arabicMedium: 32,
+  arabicSmall: 26,
   // Latin
-  display: 28,
-  title: 22,
+  display: 26,
+  title: 21,
   subtitle: 17,
   body: 16,
   caption: 13,
   micro: 11,
+};
+
+// Layout constants — standard screen padding, tab bar height, etc. Use these
+// everywhere instead of ad-hoc numbers so spacing is consistent and one tweak
+// here ripples through the whole app.
+export const layout = {
+  screenPaddingH: 20, // horizontal padding for scroll content
+  sectionGap: 16, // gap between cards/sections
+  cardPadding: 16, // internal padding inside a Card
+  rowPaddingV: 14, // vertical padding inside a settings Row
+  tabBarHeight: 56, // bottom tab bar height (matches (tabs)/_layout.jsx)
+  // Minimum bottom padding for scroll content on tab screens — clears the tab
+  // bar + a little breathing room. The actual safe-area inset is added at the
+  // screen level via useSafeAreaInsets (see screens).
+  scrollBottomTab: 72,
+  // Minimum bottom padding for scroll content on pushed (non-tab) screens —
+  // clears the Android gesture/button nav bar + breathing room.
+  scrollBottomPushed: 40,
 };
 
 // The palette. `dark` is the primary, designed-first mode. `light` is provided

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Alert, Dimensions, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import {
@@ -18,7 +19,7 @@ import { ASMA_UL_HUSNA } from "../data/asmaUlHusna";
 import { Button, Card, SectionLabel, Segmented, SwatchPicker } from "../components/ui";
 import WallpaperPreview from "../components/editor/WallpaperPreview";
 import { clearWallpaperPreviewCache } from "../components/WallpaperPreviewImage";
-import { useTheme, spacing, radii, type } from "../theme";
+import { useTheme, spacing, radii, type, layout as themeLayout } from "../theme";
 
 // Simple wallpaper customization — NOT a Figma-like editor. A calm settings
 // screen with a live preview at the top and a few controls below:
@@ -34,6 +35,7 @@ import { useTheme, spacing, radii, type } from "../theme";
 // edit individual fields on top of the current settings.
 export default function CustomizeScreen() {
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
   const s = makeStyles(theme);
   const { id } = useLocalSearchParams();
 
@@ -95,11 +97,12 @@ export default function CustomizeScreen() {
   if (!loaded) return <View style={s.loading} />;
 
   const arabic = settings.arabic;
-  const layout = settings.layout;
-  const previewWidth = Math.min(Dimensions.get("window").width - spacing.xl * 2, 340);
+  const layoutSettings = settings.layout;
+  const previewWidth = Math.min(Dimensions.get("window").width - themeLayout.screenPaddingH * 2, 340);
 
   return (
-    <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
+    <SafeAreaView style={s.loading} edges={["top", "bottom"]}>
+    <ScrollView contentContainerStyle={[s.scroll, { paddingBottom: themeLayout.scrollBottomPushed + insets.bottom }]} showsVerticalScrollIndicator={false}>
       {/* Live preview — uses the existing WallpaperPreview (maps settings →
           RN/Skia without regenerating a PNG, so it stays fast). It expects
           { ism, settings, width } and derives height from width. */}
@@ -149,7 +152,7 @@ export default function CustomizeScreen() {
       {/* Text position */}
       <SectionLabel>Text position</SectionLabel>
       <Card>
-        <Segmented options={ALIGNMENTS} value={layout.align} onChange={(v) => setField("layout", "align", v)} />
+        <Segmented options={ALIGNMENTS} value={layoutSettings.align} onChange={(v) => setField("layout", "align", v)} />
       </Card>
 
       <View style={s.actions}>
@@ -163,6 +166,7 @@ export default function CustomizeScreen() {
         />
       </View>
     </ScrollView>
+    </SafeAreaView>
   );
 }
 

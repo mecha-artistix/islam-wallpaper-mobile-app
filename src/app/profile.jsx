@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from "react-native";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { getProfile, setProfile, isValidEmail } from "../services/preferences";
 import { Button, Card, TextInputField } from "../components/ui";
-import { useTheme, spacing, type } from "../theme";
+import { useTheme, spacing, type, layout } from "../theme";
 
 // Edit profile — name and email are always optional. Both can be cleared.
 // Same shape as onboarding but reachable from Settings, so users who skipped
@@ -11,6 +12,7 @@ import { useTheme, spacing, type } from "../theme";
 export default function ProfileScreen() {
   const router = useRouter();
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
   const s = makeStyles(theme);
 
   const [name, setName] = useState("");
@@ -59,12 +61,13 @@ export default function ProfileScreen() {
   if (!loaded) return <View style={s.loading} />;
 
   return (
+    <SafeAreaView style={s.container} edges={["top", "bottom"]}>
     <KeyboardAvoidingView
       style={s.container}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <ScrollView
-        contentContainerStyle={s.scroll}
+        contentContainerStyle={[s.scroll, { paddingBottom: layout.scrollBottomPushed + insets.bottom }]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
@@ -105,6 +108,7 @@ export default function ProfileScreen() {
         </Text>
       </ScrollView>
     </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
@@ -112,7 +116,7 @@ const makeStyles = (theme) =>
   StyleSheet.create({
     loading: { flex: 1, backgroundColor: theme.bg },
     container: { flex: 1, backgroundColor: theme.bg },
-    scroll: { paddingHorizontal: spacing.xl, paddingBottom: spacing.xxxl + 16, paddingTop: spacing.lg },
+    scroll: { paddingHorizontal: layout.screenPaddingH, paddingTop: spacing.lg },
     fieldCard: { padding: spacing.lg, marginBottom: spacing.md },
     actions: { marginTop: spacing.lg, gap: spacing.sm },
     footnote: {

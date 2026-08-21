@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect, useRouter } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { ASMA_UL_HUSNA } from "../../data/asmaUlHusna";
@@ -16,7 +16,7 @@ import { generateWallpaperImage } from "../../services/wallpaper/generator";
 import { registerWallpaperScheduler } from "../../services/schedular/schedular";
 import { Button, Pill } from "../../components/ui";
 import { WallpaperPreviewImage } from "../../components/WallpaperPreviewImage";
-import { useTheme, spacing, radii, type } from "../../theme";
+import { useTheme, spacing, radii, type, layout } from "../../theme";
 
 // Home — the calm visual anchor. The current wallpaper preview dominates the
 // screen. Below it: the Arabic name, transliteration, meaning, and a clear
@@ -28,6 +28,7 @@ import { useTheme, spacing, radii, type } from "../../theme";
 export default function HomeScreen() {
   const router = useRouter();
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
   const s = makeStyles(theme);
 
   const [ready, setReady] = useState(false);
@@ -120,7 +121,7 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={s.container} edges={["top"]}>
       <ScrollView
-        contentContainerStyle={s.scroll}
+        contentContainerStyle={[s.scroll, { paddingBottom: layout.scrollBottomTab + insets.bottom }]}
         showsVerticalScrollIndicator={false}
       >
         <View style={s.headerRow}>
@@ -199,12 +200,12 @@ function formatNextChange(autoRotate, intervalMinutes, lastRotation) {
 const makeStyles = (theme) =>
   StyleSheet.create({
     container: { flex: 1, backgroundColor: theme.bg },
-    scroll: { paddingHorizontal: spacing.xl, paddingBottom: spacing.xxl + 16 },
+    scroll: { paddingHorizontal: layout.screenPaddingH },
     headerRow: {
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "space-between",
-      paddingTop: spacing.lg,
+      paddingTop: layout.sectionGap,
       marginBottom: spacing.lg,
     },
     greeting: {

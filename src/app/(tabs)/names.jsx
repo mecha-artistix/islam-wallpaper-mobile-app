@@ -1,10 +1,10 @@
 import { useMemo, useState } from "react";
 import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { ASMA_UL_HUSNA } from "../../data/asmaUlHusna";
-import { useTheme, spacing, radii, type } from "../../theme";
+import { useTheme, spacing, radii, type, layout } from "../../theme";
 
 // Browse all 99 Names. Search filters by transliteration, translation, Arabic
 // name, or number. The list is visually calm: generous spacing, a small number,
@@ -13,6 +13,7 @@ import { useTheme, spacing, radii, type } from "../../theme";
 export default function NamesScreen() {
   const router = useRouter();
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
   const s = makeStyles(theme);
   const [query, setQuery] = useState("");
 
@@ -34,7 +35,7 @@ export default function NamesScreen() {
       style={({ pressed }) => [s.row, pressed && s.rowPressed]}
       onPress={() => router.push({ pathname: "/name/[id]", params: { id: String(item.number) } })}
     >
-      <Text style={s.arabic}>{item.name}</Text>
+      <Text style={s.arabic} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{item.name}</Text>
       <View style={s.rowText}>
         <Text style={s.transliteration}>{item.transliteration}</Text>
         <Text style={s.translation} numberOfLines={1}>{item.translation}</Text>
@@ -60,8 +61,8 @@ export default function NamesScreen() {
         data={filtered}
         keyExtractor={(item) => String(item.number)}
         renderItem={renderItem}
-        ItemSeparatorComponent={() => <View style={{ height: StyleSheet.hairlineWidth, backgroundColor: theme.divider, marginLeft: 76 }} />}
-        contentContainerStyle={s.list}
+        ItemSeparatorComponent={() => <View style={{ height: StyleSheet.hairlineWidth, backgroundColor: theme.divider, marginLeft: 100 }} />}
+        contentContainerStyle={[s.list, { paddingBottom: layout.scrollBottomTab + insets.bottom }]}
         ListEmptyComponent={
           <View style={s.empty}>
             <Text style={s.emptyText}>No names match “{query}”.</Text>
@@ -101,10 +102,10 @@ function TextInputLite({ value, onChangeText, placeholder }) {
 const makeStyles = (theme) =>
   StyleSheet.create({
     container: { flex: 1, backgroundColor: theme.bg },
-    header: { paddingHorizontal: spacing.xl, paddingTop: spacing.lg, paddingBottom: spacing.sm },
+    header: { paddingHorizontal: layout.screenPaddingH, paddingTop: layout.sectionGap, paddingBottom: spacing.sm },
     title: { color: theme.text, fontSize: type.display, fontWeight: "600", letterSpacing: -0.3 },
     subtitle: { color: theme.textSecondary, fontSize: type.caption, marginTop: 2 },
-    searchWrap: { paddingHorizontal: spacing.xl, paddingBottom: spacing.md },
+    searchWrap: { paddingHorizontal: layout.screenPaddingH, paddingBottom: spacing.md },
     inputWrap: {
       flexDirection: "row",
       alignItems: "center",
@@ -120,19 +121,19 @@ const makeStyles = (theme) =>
       fontSize: type.body,
       paddingVertical: 12,
     },
-    list: { paddingHorizontal: spacing.xl, paddingBottom: spacing.xxl },
+    list: { paddingHorizontal: layout.screenPaddingH, paddingBottom: layout.scrollBottomTab },
     row: {
       flexDirection: "row",
       alignItems: "center",
       gap: spacing.md,
-      paddingVertical: 16,
+      paddingVertical: 14,
     },
     rowPressed: { opacity: 0.55 },
     arabic: {
       color: theme.text,
       fontFamily: "NotoNaskhArabic",
       fontSize: type.arabicMedium,
-      width: 60,
+      width: 84,
       textAlign: "center",
     },
     rowText: { flex: 1 },

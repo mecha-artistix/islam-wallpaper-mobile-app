@@ -9,6 +9,7 @@ import {
   Text,
   View,
 } from "react-native";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import {
@@ -18,7 +19,7 @@ import {
   isValidEmail,
 } from "../services/preferences";
 import { Button, TextInputField } from "../components/ui";
-import { useTheme, spacing, radii, type } from "../theme";
+import { useTheme, spacing, radii, type, layout } from "../theme";
 import { registerWallpaperScheduler } from "../services/schedular/schedular";
 
 // First-launch onboarding. Asks for an optional Name + Email. Both are
@@ -30,6 +31,7 @@ import { registerWallpaperScheduler } from "../services/schedular/schedular";
 export default function OnboardingScreen() {
   const router = useRouter();
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
   const s = makeStyles(theme);
 
   const [name, setName] = useState("");
@@ -76,13 +78,14 @@ export default function OnboardingScreen() {
     finish(false);
   }
   return (
+    <SafeAreaView style={s.container} edges={["top", "bottom"]}>
     <KeyboardAvoidingView
       style={s.container}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
       keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
     >
       <ScrollView
-        contentContainerStyle={s.scrollContent}
+        contentContainerStyle={[s.scrollContent, { paddingBottom: layout.scrollBottomPushed + insets.bottom }]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
@@ -130,6 +133,7 @@ export default function OnboardingScreen() {
         </Text>
       </ScrollView>
     </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
@@ -138,7 +142,7 @@ const makeStyles = (theme) =>
     container: { flex: 1, backgroundColor: theme.bg },
     scrollContent: {
       flexGrow: 1,
-      paddingHorizontal: spacing.xl,
+      paddingHorizontal: layout.screenPaddingH,
       paddingTop: spacing.xxxl + 24,
       paddingBottom: spacing.xxl,
     },

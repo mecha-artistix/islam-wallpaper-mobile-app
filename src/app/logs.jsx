@@ -1,16 +1,17 @@
 import { useCallback, useState } from "react";
 import { Alert, FlatList, StyleSheet, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect } from "expo-router";
 import { getLogs, clearLogs } from "../services/logger";
 import { Button } from "../components/ui";
-import { useTheme, spacing, type } from "../theme";
+import { useTheme, spacing, type, layout } from "../theme";
 
 // Activity log — the persistent file log of wallpaper changes and background
 // task runs. Kept for diagnostics; NOT linked from the normal Settings UI.
 // Reachable only via a long-press on the About screen's "About this app" row.
 export default function LogsScreen() {
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
   const s = makeStyles(theme);
   const [logs, setLogs] = useState([]);
 
@@ -35,7 +36,7 @@ export default function LogsScreen() {
   }
 
   return (
-    <SafeAreaView style={s.container} edges={["top"]}>
+    <SafeAreaView style={s.container} edges={["top", "bottom"]}>
       <View style={s.actions}>
         <Button label="Refresh" variant="soft" size="md" onPress={() => getLogs().then(setLogs)} />
         <Button label="Clear" variant="danger" size="md" onPress={handleClear} />
@@ -43,7 +44,7 @@ export default function LogsScreen() {
       <FlatList
         data={logs}
         keyExtractor={(_, i) => String(i)}
-        contentContainerStyle={s.list}
+        contentContainerStyle={[s.list, { paddingBottom: layout.scrollBottomPushed + insets.bottom }]}
         ListEmptyComponent={<Text style={s.empty}>No events recorded yet.</Text>}
         renderItem={({ item }) => (
           <View style={s.row}>
@@ -69,11 +70,11 @@ const makeStyles = (theme) =>
     actions: {
       flexDirection: "row",
       gap: spacing.sm,
-      paddingHorizontal: spacing.xl,
+      paddingHorizontal: layout.screenPaddingH,
       paddingTop: spacing.lg,
       paddingBottom: spacing.sm,
     },
-    list: { paddingHorizontal: spacing.xl, paddingBottom: spacing.xxl },
+    list: { paddingHorizontal: layout.screenPaddingH, paddingBottom: spacing.xxl },
     empty: { color: theme.textSecondary, fontSize: type.body, textAlign: "center", marginTop: spacing.xxxl },
     row: {
       flexDirection: "row",

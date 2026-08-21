@@ -1,7 +1,7 @@
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { useTheme, spacing, radii, type } from "../theme";
+import { useTheme, spacing, radii, type, layout } from "../theme";
 import { Card, SectionLabel, Row } from "../components/ui";
 
 // About — a calm, simple page. Includes the app purpose, a short privacy note,
@@ -10,11 +10,12 @@ import { Card, SectionLabel, Row } from "../components/ui";
 export default function AboutScreen() {
   const router = useRouter();
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
   const s = makeStyles(theme);
 
   return (
-    <SafeAreaView style={s.container} edges={["top"]}>
-      <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
+    <SafeAreaView style={s.container} edges={["top", "bottom"]}>
+      <ScrollView contentContainerStyle={[s.scroll, { paddingBottom: layout.scrollBottomPushed + insets.bottom }]} showsVerticalScrollIndicator={false}>
         <View style={s.hero}>
           <View style={s.logoMark}>
             <Text style={s.logoArabic}>بسم الله</Text>
@@ -57,7 +58,7 @@ export default function AboutScreen() {
 const makeStyles = (theme) =>
   StyleSheet.create({
     container: { flex: 1, backgroundColor: theme.bg },
-    scroll: { paddingHorizontal: spacing.xl, paddingBottom: spacing.xxxl + 16, paddingTop: spacing.lg },
+    scroll: { paddingHorizontal: layout.screenPaddingH, paddingTop: spacing.lg },
     hero: { alignItems: "center", paddingVertical: spacing.xl },
     logoMark: {
       width: 88,

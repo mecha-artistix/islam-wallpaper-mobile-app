@@ -46,8 +46,9 @@ export async function sendAppNotification(title, body) {
 }
 
 // Wallpaper-change notification — gated by the notification_settings toggle.
-// Called after every successful wallpaper set: background rotation, foreground
-// rotation, manual set from the detail page, and Set Wallpaper in the editor.
+// Called after every successful wallpaper set: background rotation and manual
+// sets (from the detail page / editor / Home). There is NO foreground
+// automatic rotation — see docs/decisions/001-background-only-rotation.md.
 export async function notifyWallpaperChanged(name) {
   const settings = await getNotificationSettings();
   if (!settings.wallpaperChange) return;

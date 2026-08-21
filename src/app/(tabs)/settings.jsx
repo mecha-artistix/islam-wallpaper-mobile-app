@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Keyboard, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect, useRouter } from "expo-router";
 import {
@@ -11,18 +11,23 @@ import {
 } from "../../services/preferences";
 import { registerWallpaperScheduler } from "../../services/schedular/schedular";
 import { useTheme, spacing, type } from "../../theme";
-import { Card, Row, SectionLabel, SwitchRow, Segmented } from "../../components/ui";
+import { Card, Row, SectionLabel, SwitchRow, Segmented, Button } from "../../components/ui";
 
 // Settings hub — grouped into a few simple sections: Profile, Wallpaper,
 // Notifications, App. Developer/debug tooling is intentionally absent from the
 // normal production UI (the activity log is reachable only via a long-press on
 // the About row, kept for diagnostics but invisible to a casual user).
+// Fixed preset intervals (kept) + a custom text input (restored). The user's
+// configured value is stored verbatim (min 1 minute); the OS scheduler may fire
+// on its own minimum cadence, but shouldRotate() honors the user's value.
+// See docs/features/rotation.md + docs/decisions/003-user-interval-vs-os-scheduler-minimum.md.
 const INTERVAL_PRESETS = [
   { id: "60", label: "1 h" },
   { id: "360", label: "6 h" },
   { id: "1440", label: "Daily" },
   { id: "10080", label: "Weekly" },
 ];
+const MIN_USER_INTERVAL_MINUTES = 1;
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -32,6 +37,8 @@ export default function SettingsScreen() {
   const [profile, setProfileState] = useState({ name: null, email: null });
   const [autoRotate, setAutoRotateState] = useState(false);
   const [intervalMinutes, setIntervalMinutes] = useState(1440);
+  const [customInterval, setCustomInterval] = useState(""); // text for the custom input
+  const [intervalError, setIntervalError] = useState("");
 
   const load = useCallback(async () => {
     const [p, auto, interval] = await Promise.all([
@@ -42,6 +49,14 @@ export default function SettingsScreen() {
     setProfileState(p);
     setAutoRotateState(auto);
     setIntervalMinutes(interval);
+    // Mirror the stored value into the custom input only when it's not a preset
+    // (so the field shows the actual configured value, e.g. "1" or "90").
+    if (!INTERVAL_PRESETS.some((pr) => parseFloat(pr.id) === interval)) {
+      setCustomInterval(String(interval));
+    } else {
+      setCustomInterval("");
+    }
+    setIntervalError("");
   }, []);
 
   // initial load
@@ -66,6 +81,32 @@ export default function SettingsScreen() {
   async function handleIntervalPreset(id) {
     const minutes = parseFloat(id);
     setIntervalMinutes(minutes);
+    setCustomInterval(""); // a preset was chosen; clear the custom field
+    setIntervalError("");
+    await setRotationIntervalMinutes(minutes);
+    await registerWallpaperScheduler({ force: true });
+  }
+
+  async function handleCustomIntervalSave() {
+    const trimmed = customInterval.trim();
+    const minutes = parseFloat(trimmed);
+    if (!trimmed || isNaN(minutes)) {
+      setIntervalError("Enter a number of minutes.");
+      return;
+    }
+    if (minutes < MIN_USER_INTERVAL_MINUTES) {
+      setIntervalError(`Minimum is ${MIN_USER_INTERVAL_MINUTES} minute.`);
+      return;
+    }
+    // Reject absurdly large values defensively (cap at 1 year). The user value
+    // is stored verbatim — no silent 15-min bump (see decision 003).
+    if (minutes > 525600) {
+      setIntervalError("Interval is too large.");
+      return;
+    }
+    Keyboard.dismiss();
+    setIntervalMinutes(minutes);
+    setIntervalError("");
     await setRotationIntervalMinutes(minutes);
     await registerWallpaperScheduler({ force: true });
   }
@@ -110,6 +151,35 @@ export default function SettingsScreen() {
                 value={String(intervalMinutes)}
                 onChange={handleIntervalPreset}
               />
+              {/* Custom interval (restored). The user can enter any value down
+                  to 1 minute. Stored verbatim — the OS scheduler may fire on
+                  its own minimum cadence, but shouldRotate() honors this. */}
+              <Text style={[s.intervalLabel, { marginTop: spacing.md }]}>Custom (minutes)</Text>
+              <View style={s.customRow}>
+                <TextInput
+                  style={[s.customInput, intervalError ? s.customInputError : null]}
+                  value={customInterval}
+                  onChangeText={(v) => {
+                    setCustomInterval(v);
+                    if (intervalError) setIntervalError("");
+                  }}
+                  placeholder="e.g. 1, 90, 720"
+                  placeholderTextColor={theme.textTertiary}
+                  keyboardType="decimal-pad"
+                  returnKeyType="done"
+                  onSubmitEditing={handleCustomIntervalSave}
+                />
+                <Button
+                  label="Save"
+                  onPress={handleCustomIntervalSave}
+                  size="md"
+                  disabled={!customInterval.trim()}
+                />
+              </View>
+              {intervalError ? <Text style={s.intervalError}>{intervalError}</Text> : null}
+              <Text style={s.intervalHint}>
+                Minimum 1 minute. Android may schedule the background wake-up on a longer cadence; the app rotates only when enough time has actually elapsed.
+              </Text>
             </View>
           ) : null}
         </Card>
@@ -175,6 +245,35 @@ const makeStyles = (theme) =>
       letterSpacing: 0.3,
       textTransform: "uppercase",
       marginBottom: spacing.sm,
+    },
+    customRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.sm,
+    },
+    customInput: {
+      flex: 1,
+      backgroundColor: theme.surfaceAlt,
+      borderRadius: 10,
+      paddingHorizontal: 14,
+      paddingVertical: 12,
+      color: theme.text,
+      fontSize: type.body,
+      borderWidth: 1,
+      borderColor: "transparent",
+    },
+    customInputError: { borderColor: theme.danger },
+    intervalError: {
+      color: theme.danger,
+      fontSize: type.caption,
+      marginTop: spacing.xs,
+      marginLeft: spacing.xs,
+    },
+    intervalHint: {
+      color: theme.textTertiary,
+      fontSize: type.caption,
+      lineHeight: 17,
+      marginTop: spacing.sm,
     },
     versionText: { color: theme.textSecondary, fontSize: type.body },
     footer: {

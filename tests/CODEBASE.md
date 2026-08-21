@@ -12,6 +12,26 @@ does NOT modify application code unless explicitly instructed.
 - **Setup:** `tests/unit/setup.js` — fakes `expo-secure-store` + `expo-file-system`
   on `global.__secureStore` / `global.__files`, resets between tests.
 
+### Version pinning (do NOT bump without checking)
+
+`jest-expo` and `@react-native/jest-preset` are **exact-pinned** in
+`package.json` (not `^`/`~`) because of an upstream peer conflict:
+
+- `react-native@0.86.0` peer-optional-requires `@react-native/jest-preset@"0.86.0"` (exact).
+- `jest-expo@57.0.3+` peer-requires `@react-native/jest-preset@^0.86.2`.
+
+These are mutually exclusive — no single `@react-native/jest-preset` version
+satisfies both. So:
+
+- `jest-expo` is pinned to `57.0.2` (the last patch that accepts `^0.86.0`).
+- `@react-native/jest-preset` is pinned to `0.86.0` (exact, to match
+  react-native's peerOptional).
+
+This lets `npm ci` (EAS's strict install) resolve cleanly **without**
+`--legacy-peer-deps`. If you bump `jest-expo` to 57.0.3+, EAS builds will fail
+with `ERESOLVE`. Verify with a clean `npm install` (no `--legacy-peer-deps`)
+before pushing.
+
 ## How to run
 
 ```bash

@@ -8,6 +8,12 @@ const KEYS = {
   LAST_ROTATION: "wallpaper_last_rotation",
   WALLPAPER_SETTINGS: "wallpaper_settings",
   NOTIFICATION_SETTINGS: "notification_settings",
+  // Onboarding / profile (added in the redesign). Name and email are optional
+  // and stored locally only — structured so a backend could replace these
+  // accessors later without touching callers.
+  ONBOARDING_COMPLETED: "onboarding_completed",
+  USER_NAME: "user_name",
+  USER_EMAIL: "user_email",
 };
 
 // User-saved presets live in a file, not SecureStore — a presets list quickly
@@ -104,6 +110,48 @@ export async function setNotificationSetting(key, value) {
   const next = { ...current, [key]: value };
   await SecureStore.setItemAsync(KEYS.NOTIFICATION_SETTINGS, JSON.stringify(next));
   return next;
+}
+
+// ─── Onboarding & profile ────────────────────────────────────────────────────
+// Onboarding is shown once on first launch. Name/email are always optional —
+// the app works fully without them. Stored locally; a backend could replace
+// these accessors later without touching callers.
+
+export async function getOnboardingCompleted() {
+  const value = await SecureStore.getItemAsync(KEYS.ONBOARDING_COMPLETED);
+  return value === "true";
+}
+
+export async function setOnboardingCompleted(value = true) {
+  await SecureStore.setItemAsync(KEYS.ONBOARDING_COMPLETED, String(value));
+}
+
+// Returns { name, email } — both null when not provided.
+export async function getProfile() {
+  const [name, email] = await Promise.all([
+    SecureStore.getItemAsync(KEYS.USER_NAME),
+    SecureStore.getItemAsync(KEYS.USER_EMAIL),
+  ]);
+  return { name, email };
+}
+
+export async function setProfile({ name, email }) {
+  if (name !== undefined) {
+    const v = name && name.trim() ? name.trim() : null;
+    if (v) await SecureStore.setItemAsync(KEYS.USER_NAME, v);
+    else await SecureStore.deleteItemAsync(KEYS.USER_NAME);
+  }
+  if (email !== undefined) {
+    const v = email && email.trim() ? email.trim() : null;
+    if (v) await SecureStore.setItemAsync(KEYS.USER_EMAIL, v);
+    else await SecureStore.deleteItemAsync(KEYS.USER_EMAIL);
+  }
+}
+
+// Minimal email validation — used only to show inline feedback, never to block.
+export function isValidEmail(email) {
+  if (!email) return true; // empty is valid (email is optional)
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
 }
 
 // User presets: array of { name, settings }. Built-in presets are NOT stored —

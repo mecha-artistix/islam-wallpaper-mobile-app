@@ -1,5 +1,19 @@
 # Codebase Overview — Dynamic Wallpaper App
 
+> **Note (redesign):** The screen/navigation structure below reflects the
+> *pre-redesign* architecture and is retained for history. The current app
+> uses a bottom-tab layout (Home · Names · Settings) with a first-launch
+> onboarding gate, a simple Customize screen (replacing the Figma-like
+> editor), and a restructured Settings (Profile / Wallpaper / Notifications /
+> App). The service layer (preferences, scheduler, generator, rotation,
+> notifications, logger) is unchanged in substance — only extended
+> (onboarding + profile accessors). See `src/app/` for the live route tree:
+> `_layout.jsx` (root + onboarding gate), `(tabs)/` (bottom tabs),
+> `onboarding.jsx`, `name/[id].jsx`, `customize.jsx`, `profile.jsx`,
+> `notifications.jsx`, `about.jsx`, `logs.jsx` (hidden diagnostics).
+> The design system lives in `src/theme.js` (dark-first, warm cream + muted
+> gold) and shared UI in `src/components/ui/`.
+
 ## What this app does
 
 A lightweight Android app that sets one of the 99 Names of Allah (Asma ul Husna) as the device wallpaper — white Arabic text on a dark background — and rotates through them automatically on a user-defined interval.

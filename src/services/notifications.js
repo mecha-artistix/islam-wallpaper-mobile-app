@@ -27,6 +27,11 @@ export async function ensureNotificationPermission() {
 // fires a local notification, never throws. Any feature that needs to notify
 // should call this (gated by its own setting) — debugging and improvements
 // live in this one place. Works headless (background task) and in components.
+//
+// CRITICAL: the trigger MUST reference the channelId. `trigger: null` fires
+// immediately but attaches NO channel — on Android 8+ a channel-less
+// notification is silently dropped. The channel is created above and attached
+// here via { channelId } (the ChannelAwareTriggerInput type).
 export async function sendAppNotification(title, body) {
   try {
     if (!(await ensureNotificationPermission())) return false;
@@ -36,7 +41,7 @@ export async function sendAppNotification(title, body) {
     });
     await Notifications.scheduleNotificationAsync({
       content: { title, body, sound: "default" },
-      trigger: null, // immediate
+      trigger: { channelId: CHANNEL_ID }, // immediate + on the "wallpaper" channel
     });
     return true;
   } catch (e) {

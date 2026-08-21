@@ -16,17 +16,19 @@ activity log is reachable only via a long-press on the About row.
 ## Main components / functions
 
 - `SettingsScreen`:
+  - **Current section** — at-a-glance state: current name + number, next name + number, interval (human-readable), last rotation (relative time, e.g. "3 min ago"), auto-rotate on/off. Refreshed on focus.
   - **Profile section** — link to `/profile`.
   - **Wallpaper section** — auto-rotate switch + interval selector + "Wallpaper appearance" link to `/customize`.
   - **Notifications section** — link to `/notifications`.
   - **App section** — About (link, with hidden long-press → logs) + Version.
 - **Interval selector** (in settings.jsx) — supports BOTH:
   - **Fixed presets** (`Segmented`: 1h / 6h / Daily / Weekly).
-  - **Custom input** (`TextInput` + Save, min **1 minute**, validated inline).
+  - **Custom input** (`TextInput` + Save, min **1 minute**, validated inline, success `Alert` popup on save).
   - The user value is stored verbatim; the OS scheduler minimum is handled separately. See `docs/decisions/003-user-interval-vs-os-scheduler-minimum.md`.
   - When the active interval matches a preset, that preset is highlighted; otherwise none highlighted (custom).
+  - The hint explains the Android ~15-min wake-up floor for sub-15-min settings.
 - `handleAutoToggle(value)` — `setAutoRotate(value)` + `registerWallpaperScheduler({ force: true })`.
-- `handleIntervalPreset(id)` / `handleCustomIntervalSave()` — write the interval + force re-register.
+- `handleIntervalPreset(id)` / `handleCustomIntervalSave()` — write the interval + force re-register + `Alert.alert("Saved", ...)` on custom save.
 
 ## Data flow
 

@@ -1,15 +1,18 @@
 import { useCallback, useEffect, useState } from "react";
-import { Keyboard, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { Alert, Keyboard, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect, useRouter } from "expo-router";
 import {
   getAutoRotate,
+  getLastRotation,
   getProfile,
   getRotationIntervalMinutes,
+  getSelectedNameIndex,
   setAutoRotate,
   setRotationIntervalMinutes,
 } from "../../services/preferences";
 import { registerWallpaperScheduler } from "../../services/schedular/schedular";
+import { ASMA_UL_HUSNA } from "../../data/asmaUlHusna";
 import { useTheme, spacing, type } from "../../theme";
 import { Card, Row, SectionLabel, SwitchRow, Segmented, Button } from "../../components/ui";
 
@@ -39,16 +42,23 @@ export default function SettingsScreen() {
   const [intervalMinutes, setIntervalMinutes] = useState(1440);
   const [customInterval, setCustomInterval] = useState(""); // text for the custom input
   const [intervalError, setIntervalError] = useState("");
+  // Current-state section
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [lastRotation, setLastRotationState] = useState(null);
 
   const load = useCallback(async () => {
-    const [p, auto, interval] = await Promise.all([
+    const [p, auto, interval, idx, last] = await Promise.all([
       getProfile(),
       getAutoRotate(),
       getRotationIntervalMinutes(),
+      getSelectedNameIndex(),
+      getLastRotation(),
     ]);
     setProfileState(p);
     setAutoRotateState(auto);
     setIntervalMinutes(interval);
+    setSelectedIndex(idx);
+    setLastRotationState(last);
     // Mirror the stored value into the custom input only when it's not a preset
     // (so the field shows the actual configured value, e.g. "1" or "90").
     if (!INTERVAL_PRESETS.some((pr) => parseFloat(pr.id) === interval)) {
@@ -109,6 +119,8 @@ export default function SettingsScreen() {
     setIntervalError("");
     await setRotationIntervalMinutes(minutes);
     await registerWallpaperScheduler({ force: true });
+    // Explicit success feedback — the user must know the save happened.
+    Alert.alert("Saved", `Rotation interval set to ${minutes} minute${minutes === 1 ? "" : "s"}.`);
   }
 
   function handleAboutLongPress() {
@@ -121,6 +133,43 @@ export default function SettingsScreen() {
     <SafeAreaView style={s.container} edges={["top"]}>
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
         <Text style={s.title}>Settings</Text>
+
+        {/* ── Current state (at-a-glance) ── */}
+        <SectionLabel>Current</SectionLabel>
+        <Card>
+          <Row
+            title="Current name"
+            trailing={
+              <Text style={s.stateValue}>
+                {ASMA_UL_HUSNA[selectedIndex]?.transliteration} · #{ASMA_UL_HUSNA[selectedIndex]?.number}
+              </Text>
+            }
+          />
+          <Divider theme={theme} />
+          <Row
+            title="Next name"
+            trailing={
+              <Text style={s.stateValue}>
+                {ASMA_UL_HUSNA[(selectedIndex + 1) % ASMA_UL_HUSNA.length]?.transliteration} · #{ASMA_UL_HUSNA[(selectedIndex + 1) % ASMA_UL_HUSNA.length]?.number}
+              </Text>
+            }
+          />
+          <Divider theme={theme} />
+          <Row
+            title="Interval"
+            trailing={<Text style={s.stateValue}>{humanInterval(intervalMinutes)}</Text>}
+          />
+          <Divider theme={theme} />
+          <Row
+            title="Last rotation"
+            trailing={<Text style={s.stateValue}>{formatLastRotation(lastRotation)}</Text>}
+          />
+          <Divider theme={theme} />
+          <Row
+            title="Auto-rotate"
+            trailing={<Text style={s.stateValue}>{autoRotate ? "On" : "Off"}</Text>}
+          />
+        </Card>
 
         {/* ── Profile ── */}
         <SectionLabel>Profile</SectionLabel>
@@ -178,7 +227,7 @@ export default function SettingsScreen() {
               </View>
               {intervalError ? <Text style={s.intervalError}>{intervalError}</Text> : null}
               <Text style={s.intervalHint}>
-                Minimum 1 minute. Android may schedule the background wake-up on a longer cadence; the app rotates only when enough time has actually elapsed.
+                Minimum 1 minute. Note: Android schedules background wake-ups on its own cadence (often ~15 minutes), so a sub-15-minute setting may not fire every minute. The app rotates only when enough time has actually elapsed since the last rotation.
               </Text>
             </View>
           ) : null}
@@ -222,6 +271,29 @@ export default function SettingsScreen() {
 // A hairline divider used between rows inside a Card.
 function Divider({ theme }) {
   return <View style={{ height: StyleSheet.hairlineWidth, backgroundColor: theme.divider, marginLeft: spacing.lg }} />;
+}
+
+// Human-readable interval (e.g. "1 min", "6 h", "Daily", "Weekly").
+function humanInterval(minutes) {
+  if (minutes < 60) return `${Math.round(minutes)} min`;
+  const hours = minutes / 60;
+  if (hours < 24) return `${Math.round(hours * 10) / 10} h`;
+  const days = hours / 24;
+  if (days === 1) return "Daily";
+  if (days === 7) return "Weekly";
+  return `${Math.round(days * 10) / 10} days`;
+}
+
+// Relative time since last rotation, or "Never".
+function formatLastRotation(timestamp) {
+  if (!timestamp) return "Never";
+  const minutes = Math.floor((Date.now() - timestamp) / 60000);
+  if (minutes < 1) return "Just now";
+  if (minutes < 60) return `${minutes} min ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} h ${minutes % 60} min ago`;
+  const days = Math.floor(hours / 24);
+  return `${days} d ${hours % 24} h ago`;
 }
 
 const makeStyles = (theme) =>
@@ -276,6 +348,13 @@ const makeStyles = (theme) =>
       marginTop: spacing.sm,
     },
     versionText: { color: theme.textSecondary, fontSize: type.body },
+    stateValue: {
+      color: theme.text,
+      fontSize: type.body,
+      fontWeight: "500",
+      textAlign: "right",
+      flexShrink: 1,
+    },
     footer: {
       color: theme.textTertiary,
       fontSize: type.caption,

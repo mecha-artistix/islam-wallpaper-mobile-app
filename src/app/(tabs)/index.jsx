@@ -64,8 +64,9 @@ export default function HomeScreen() {
       }
       SplashScreen.hideAsync();
       // Ensure the scheduler is registered (also done in onboarding, but this
-      // covers users who upgrade from a pre-onboarding build).
-      registerWallpaperScheduler();
+      // covers users who upgrade from a pre-onboarding build). Awaited so the
+      // task is definitely registered before the user backgrounds the app.
+      await registerWallpaperScheduler();
       await loadState();
       setReady(true);
     })();

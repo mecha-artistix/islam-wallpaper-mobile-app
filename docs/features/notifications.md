@@ -32,7 +32,9 @@ applyWallpaper (rotation) → notifyWallpaperChanged(name)
 
 ## Important constraints
 
+- **The trigger MUST reference the channelId.** `scheduleNotificationAsync` is called with `trigger: { channelId: CHANNEL_ID }` (the `ChannelAwareTriggerInput` type). Using `trigger: null` fires immediately but attaches NO channel — on Android 8+ a channel-less notification is **silently dropped**. This was a real bug (no notification appeared on background rotation) — fixed by attaching the channel to the trigger.
 - `Notifications.setNotificationHandler` is set at module load so foreground notifications show a banner (otherwise they're silently dropped). Do not remove it.
+- `expo-notifications` is in `app.json` plugins (declares `POST_NOTIFICATIONS` for Android 13+ + sets up the module at build time). Requires `npx expo prebuild --clean` to take effect.
 - The notification is **not** the rotation mechanism — it only alerts the user that a change happened.
 - No backend / push notifications yet — local only.
 
